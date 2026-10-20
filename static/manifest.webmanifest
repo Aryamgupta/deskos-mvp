@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "DeskOS Workstation Companion",
+  "short_name": "DeskOS",
+  "description": "A local workstation clock and system monitor for your Ubuntu laptop.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#080b10",
+  "theme_color": "#080b10",
+  "icons": [
+    {"src": "/icons/deskos.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}

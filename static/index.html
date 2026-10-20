@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#04060a"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="application-name" content="DeskOS"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/deskos.svg" type="image/svg+xml"><title>DeskOS</title>
+<style>
+:root{color-scheme:dark;--bg:#04060a;--card:rgba(255,255,255,.04);--line:rgba(255,255,255,.08);--muted:#6f7d8f;--soft:#a9b6c6;--text:#eaf4fb;--led:#e9fbff;--cy:#5fe0ff;--amber:#ffb44d;--green:#7cf0ae;--red:#ff7d7d}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-height:100%;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body{background:radial-gradient(1100px 650px at 50% 28%,#0f1a26,#04060a 72%);background-attachment:fixed;padding:clamp(10px,2vw,26px);overflow-x:hidden}
+.shell{max-width:1400px;margin:auto}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.brand{font-size:14px;font-weight:700;letter-spacing:.08em;display:flex;align-items:baseline;gap:10px;min-width:0}.brand b{font-weight:400;letter-spacing:0;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-actions{display:flex;align-items:center;gap:8px}
+.status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--soft);padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}.dot.off{background:var(--red);box-shadow:0 0 10px var(--red)}
+.pill,.btn,.fullscreen-btn{background:var(--card);color:var(--soft);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:12px;font-family:inherit;white-space:nowrap}
+.pill:active,.btn:active{transform:scale(.96)}
+#ambientBtn{color:var(--cy);border-color:rgba(95,224,255,.35)}
+.cluster{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:clamp(8px,2vw,24px)}
+.gcol{display:grid;justify-items:center;gap:8px}
+.gauge{position:relative;width:clamp(96px,26vh,200px);aspect-ratio:1}
+.gauge svg{width:100%;height:100%;transform:rotate(135deg)}
+.trk,.arc{fill:none;stroke-width:7;stroke-linecap:round}
+.trk{stroke:rgba(255,255,255,.08);stroke-dasharray:75 100}
+.arc{stroke:var(--cy);stroke-dasharray:0 100;transition:stroke-dasharray .6s;filter:drop-shadow(0 0 4px rgba(95,224,255,.7))}
+.arc.mid{stroke:var(--amber)}.arc.hi{stroke:var(--red)}
+.g-in{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding-top:6%}
+.g-val{font-size:clamp(24px,5vh,44px);font-weight:300;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.unit{font-size:.4em;color:var(--muted);letter-spacing:0}
+.g-lbl{font-size:12px;color:var(--soft);margin-top:2px}
+.g-note{font-size:11px;color:var(--muted);text-align:center;max-width:180px}
+.center{background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.012));border:1px solid var(--line);border-radius:28px;box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 70px rgba(95,224,255,.04);padding:clamp(16px,3vh,32px) clamp(12px,2vw,28px);text-align:center;min-width:0;cursor:pointer}
+.clock{--h:clamp(48px,min(26vh,25vw),130px);height:var(--h);display:flex;align-items:center;justify-content:center;gap:calc(var(--h)*.07);filter:drop-shadow(0 0 7px rgba(140,228,255,.55));margin:0 auto}
+.d{height:100%;width:auto;transform:skewX(-5deg)}
+.s{fill:rgba(255,255,255,.05)}.s.on{fill:var(--led)}
+.d.sec{height:42%;align-self:flex-end}.d.sec .s.on{fill:var(--amber)}
+.colon{display:flex;flex-direction:column;justify-content:space-evenly;height:70%;padding:0 calc(var(--h)*.03)}
+.colon i{display:block;width:calc(var(--h)*.09);height:calc(var(--h)*.09);border-radius:50%;background:var(--led);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.2}}
+.date{color:var(--soft);font-size:clamp(13px,2.2vh,18px);margin-top:clamp(10px,2vh,20px)}
+.greet{color:var(--muted);font-size:12px;margin-top:3px}
+.clock-foot{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:clamp(8px,1.6vh,16px);color:var(--muted);font-size:11px}
+.tag{border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--cy);font-size:11px;white-space:nowrap}
+.offline{display:none;margin:12px 0;padding:10px 14px;border:1px solid rgba(255,125,125,.3);border-radius:14px;color:var(--red);font-size:13px}
+.alert-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 8px}.alert-state{font-size:11px;color:var(--muted)}
+.warning-list{display:grid;gap:7px;margin:0 0 4px}
+.warning{padding:9px 14px;border:1px solid rgba(255,180,77,.3);border-radius:14px;color:var(--amber);background:rgba(255,180,77,.07);font-size:13px}
+.warning.critical{border-color:rgba(255,125,125,.35);color:var(--red);background:rgba(255,125,125,.08)}
+.warning.ok{border-color:var(--line);color:var(--muted);background:transparent;font-size:12px}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;min-width:0}
+.k{font-size:11px;color:var(--muted)}
+.v{font-size:clamp(14px,2.2vh,17px);font-weight:500;margin-top:6px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.v.big{font-size:clamp(22px,3.4vh,30px);font-weight:300;letter-spacing:-.03em}
+.bar{height:4px;border-radius:8px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:8px}
+.fill{height:100%;width:0;background:linear-gradient(90deg,#3fb8d6,var(--cy));border-radius:8px;transition:width .5s}.fill.mid{background:var(--amber)}.fill.hi{background:var(--red)}
+.n{font-size:10px;color:var(--muted);margin-top:7px;overflow-wrap:anywhere}
+.bottom{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin-top:10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;min-width:0}
+.sub{font-size:12px;color:var(--muted)}
+.runtime-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{border:1px solid rgba(124,240,174,.25);color:var(--green);background:rgba(124,240,174,.08);border-radius:999px;padding:5px 12px;font-size:12px}.chip.empty{border-color:var(--line);color:var(--muted);background:transparent}
+.focus{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.focus-time{font-size:32px;font-weight:300;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+#focusBtn{background:var(--cy);color:#03141a;border-color:transparent;font-weight:600}
+.footer{display:flex;justify-content:space-between;gap:12px;color:#4f5b6b;font-size:11px;padding:14px 4px 2px}
+.alert-toast{display:none;position:fixed;z-index:99;left:50%;bottom:18px;transform:translateX(-50%);width:min(92vw,520px);padding:14px 16px;border:1px solid rgba(255,180,77,.4);border-radius:18px;background:#1c1810;color:var(--amber);box-shadow:0 12px 40px #000a}
+.alert-toast.critical{border-color:rgba(255,125,125,.45);background:#1e1112;color:var(--red)}.alert-toast.show{display:block}
+.toast-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:650;font-size:13px}.toast-message{font-size:13px;line-height:1.45;margin-top:8px}
+.toast-close{background:transparent;color:inherit;border:1px solid currentColor;border-radius:999px;padding:4px 10px;font-size:11px}
+.ambient .gcol,.ambient .strip,.ambient .bottom,.ambient .footer,.ambient .alert-tools,.ambient .warning-list{display:none}
+.ambient .cluster{grid-template-columns:1fr}.ambient .top{opacity:.55}
+.ambient .center{min-height:72vh;display:flex;flex-direction:column;justify-content:center;background:transparent;border-color:transparent;box-shadow:none}
+.ambient .clock{--h:min(36vh,27vw)}.ambient .date{font-size:clamp(15px,3vh,24px)}
+.ambient .offline{max-width:620px;margin:14px auto 0;text-align:center;border-color:var(--line);color:var(--muted)}
+@media(max-width:760px) and (orientation:portrait){.cluster{grid-template-columns:1fr 1fr;grid-template-areas:"c c" "l r"}.center{grid-area:c}.gcol.l{grid-area:l}.gcol.r{grid-area:r}.bottom{grid-template-columns:1fr}.strip{grid-template-columns:1fr 1fr}.status span:last-child{display:none}}
+@media(orientation:landscape) and (max-height:500px){body{padding:8px 14px}.top{margin-bottom:8px}.strip{grid-template-columns:repeat(6,1fr);gap:8px}.tile{padding:8px 10px}.n{display:none}.center{padding:10px}.g-note{display:none}}
+@media(prefers-reduced-motion:reduce){.colon i{animation:none}.arc,.fill{transition:none}}
+</style></head>
+<body><main class="shell" id="app">
+<header class="top"><div class="brand">DESKOS<b id="hostname">Waiting for laptop</b></div><div class="top-actions"><div class="status"><span id="dot" class="dot"></span><span id="connection">Connecting to laptop</span></div><button class="pill" id="ambientBtn" type="button">Ambient clock</button><button class="pill fullscreen-btn" id="fullscreenBtn" type="button">Fullscreen</button></div></header>
+<section class="cluster">
+<div class="gcol l"><div class="gauge"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="42" pathLength="100"/><circle class="arc" id="cpuBar" cx="50" cy="50" r="42" pathLength="100"/></svg><div class="g-in"><div class="g-val" id="cpu">—<span class="unit"> %</span></div><div class="g-lbl">CPU load</div></div></div><div class="g-note">Processor utilization</div></div>
+<article class="center clock-panel" id="clockPanel"><div class="clock" id="clock" aria-label="Time"></div><div class="date" id="date">Loading date…</div><div class="greet" id="greet"></div><div class="clock-foot"><span id="clockState">Workstation companion</span><span class="tag" id="modeTag">Live monitor</span></div></article>
+<div class="gcol r"><div class="gauge"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="42" pathLength="100"/><circle class="arc" id="ramBar" cx="50" cy="50" r="42" pathLength="100"/></svg><div class="g-in"><div class="g-val" id="ram">—<span class="unit"> %</span></div><div class="g-lbl">Memory</div></div></div><div class="g-note" id="ramNote">RAM usage</div></div>
+</section>
+<div class="offline" id="offline">Laptop unavailable — showing clock only. Metrics are hidden to prevent stale readings.</div>
+<div class="alert-tools"><span class="alert-state" id="alertState">Phone alerts are off until enabled.</span><button class="btn" id="enableAlerts" type="button">Enable phone alerts</button></div><div class="warning-list" id="warnings" aria-live="polite"><div class="warning ok">Monitoring is lightweight. Warnings appear only when thresholds persist.</div></div><aside class="alert-toast" id="alertToast" role="alert" aria-live="assertive"><div class="toast-head"><span id="toastTitle">DeskOS warning</span><button class="toast-close" id="toastClose" type="button">Dismiss</button></div><div class="toast-message" id="toastMessage"></div></aside>
+<section class="strip" id="monitoring">
+<div class="tile"><div class="k">Storage</div><div class="v big" id="disk">—<span class="unit"> %</span></div><div class="bar"><div class="fill" id="diskBar"></div></div><div class="n" id="diskNote">Root filesystem</div></div>
+<div class="tile"><div class="k">Network</div><div class="v big" id="netRate">—</div><div class="bar"><div class="fill" id="netBar"></div></div><div class="n" id="network">—</div></div>
+<div class="tile"><div class="k">Battery</div><div class="v" id="battery">—</div></div>
+<div class="tile"><div class="k">Disk read / write</div><div class="v" id="diskActivity">—</div></div>
+<div class="tile"><div class="k">CPU temperature</div><div class="v" id="temp">Checking…</div></div>
+<div class="tile"><div class="k">System uptime</div><div class="v" id="uptime">—</div></div>
+</section>
+<section class="bottom"><article class="panel"><div class="k">Developer environment · Node.js &amp; Bun</div><div class="sub" style="margin-top:4px">Detected processes (not yet health checks)</div><div class="runtime-list" id="runtimes"><span class="chip empty">Waiting for system status</span></div></article>
+<article class="panel"><div class="k">Focus session · 25 min</div><div class="focus" style="margin-top:6px"><div><div class="focus-time" id="focusTime">25:00</div><div class="sub" id="focusLabel">Ready when you are</div></div><div style="display:flex;gap:6px"><button class="btn" id="focusBtn">Start</button><button class="btn" id="resetBtn">Reset</button></div></div></article></section>
+<footer class="footer"><span id="hostSub">DeskOS will connect over your local network.</span><span id="updated">Waiting for first update</span></footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);let lastSeen=0,focusLeft=1500,focusRun=false,focusInterval=null,ambient=false,lastOnline=null,cpuHot=0,ramHot=0,tempHot=0,alertsEnabled=false,lastWarningKey='',toastTimer=null,audioContext=null;
+const SG='abcdefg',MAP=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
+const HZ=y=>`10,${y} 15,${y-5} 45,${y-5} 50,${y} 45,${y+5} 15,${y+5}`,VT=(x,a,b)=>`${x},${a} ${x+5},${a+5} ${x+5},${b-5} ${x},${b} ${x-5},${b-5} ${x-5},${a+5}`;
+const PTS={a:HZ(6),g:HZ(52),d:HZ(98),f:VT(6,9,49),b:VT(54,9,49),e:VT(6,55,95),c:VT(54,55,95)};
+const dig=c=>`<svg class="d ${c}" viewBox="0 0 60 104">${[...SG].map(k=>`<polygon class="s" data-k="${k}" points="${PTS[k]}"/>`).join('')}</svg>`;
+$('clock').innerHTML=dig('')+dig('')+'<span class="colon"><i></i><i></i></span>'+dig('')+dig('')+dig('sec')+dig('sec');
+const DG=[...$('clock').querySelectorAll('.d')];let lastT='';
+function clockTick(){const d=new Date(),t=[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join('');if(t===lastT)return;[...t].forEach((ch,i)=>{if(!lastT||lastT[i]!==ch)DG[i].querySelectorAll('.s').forEach(s=>s.classList.toggle('on',MAP[ch].includes(s.dataset.k)))});lastT=t;$('date').textContent=d.toLocaleDateString([], {weekday:'long',year:'numeric',month:'long',day:'numeric'});const h=d.getHours();$('greet').textContent=h<5?'Late night. Rest soon.':h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Winding down for the night';}
+function duration(s){s=Math.max(0,Math.floor(s||0));const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h ${m}m`:h?`${h}h ${m}m`:`${m}m ${s%60}s`;}
+function bytes(n){if(n<1024)return n+' B/s';const u=['KB/s','MB/s','GB/s'];let i=-1;do{n/=1024;i++}while(n>=1024&&i<u.length-1);return n.toFixed(1)+' '+u[i];}
+function metric(value,valueId,barId){const v=Math.max(0,Math.min(100,value||0)),st=v>=90?' hi':v>=75?' mid':'',el=$(barId);$(valueId).innerHTML=`${Math.round(value)}<span class="unit"> %</span>`;if(el.tagName.toLowerCase()==='circle'){el.style.strokeDasharray=(v*.75)+' 100';el.setAttribute('class','arc'+st);}else{el.style.width=v+'%';el.className='fill'+st;}}
+function showWarnings(s){
+  const warnings=[];
+  const cpu=Number(s.cpu_percent)||0;
+  const ram=Number(s.memory?.percent)||0;
+  cpuHot=cpu>=90?cpuHot+1:0;
+  ramHot=ram>=90?ramHot+1:0;
+  const temps=s.temperatures||[];
+  const hottest=temps.reduce((m,t)=>Math.max(m,Number(t.celsius)||0),0);
+  tempHot=hottest>=85?tempHot+1:0;
+  if(cpuHot>=3)warnings.push({text:`High CPU usage sustained (${Math.round(cpu)}%). Check active development tasks if this persists.`,critical:false});
+  if(ramHot>=3)warnings.push({text:`RAM usage is high (${Math.round(ram)}%). Consider closing unused applications if the system feels slow.`,critical:false});
+  if(tempHot>=2)warnings.push({text:`High CPU/system temperature (${Math.round(hottest)} °C), if the reported sensor is accurate. Check ventilation and workload.`,critical:hottest>=95});
+  const rootFree=Number(s.disk?.free)||0,rootTotal=Number(s.disk?.total)||0;
+  if(rootTotal>0&&rootFree/rootTotal<0.08)warnings.push({text:'Low free storage: less than 8% remains on the monitored filesystem.',critical:false});
+  $('warnings').innerHTML=warnings.length?warnings.map(w=>`<div class="warning ${w.critical?'critical':''}">${esc(w.text)}</div>`).join(''):'<div class="warning ok">System status looks normal. Threshold checks are lightweight and sample-based.</div>';
+  const warningKey=warnings.map(w=>w.text).join('|');
+  if(warningKey && warningKey!==lastWarningKey){const critical=warnings.some(w=>w.critical);showAlert(warnings[0].text,critical);}
+  lastWarningKey=warningKey;
+}
+function setOnline(on){
+  $('dot').classList.toggle('off',!on);
+  $('connection').textContent=on?'Laptop online':'Laptop offline';
+  $('offline').style.display=on?'none':'block';
+  $('monitoring').style.opacity=on?'1':'.18';
+  $('clockState').textContent=on?'Workstation online':'Clock mode · laptop offline';
+  $('modeTag').textContent=on?'Live monitor':'Ambient clock';
+  // Switch modes only when connectivity changes, so manual ambient mode remains usable while online.
+  if(lastOnline!==on){
+    ambient=!on;
+    document.body.classList.toggle('ambient',ambient);
+    $('ambientBtn').textContent=ambient?'Show dashboard':'Ambient clock';
+    lastOnline=on;
+  }
+  if(!on){
+    $('hostname').textContent='Laptop unavailable';$('hostSub').textContent='Waiting for DeskOS service to return';
+    $('uptime').textContent='—';$('battery').textContent='—';$('network').textContent='—';$('diskActivity').textContent='—';$('temp').textContent='—';
+    $('cpu').innerHTML='—<span class="unit"> %</span>';$('ram').innerHTML='—<span class="unit"> %</span>';$('disk').innerHTML='—<span class="unit"> %</span>';
+    ['cpuBar','ramBar'].forEach(i=>$(i).style.strokeDasharray='0 100');$('netRate').textContent='—';$('runtimes').innerHTML='<span class="chip empty">Laptop offline</span>';
+  }
+}
+async function update(){let timeoutId;const controller=new AbortController();try{timeoutId=setTimeout(()=>controller.abort(),2500);const r=await fetch('/api/status',{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error('status');const s=await r.json();lastSeen=Date.now();setOnline(true);$('hostname').textContent=s.hostname||'Ubuntu workstation';$('hostSub').textContent='Local service active · refresh every 5 seconds';$('uptime').textContent=duration(s.uptime_seconds);$('battery').textContent=s.battery?`${s.battery.percent}% · ${s.battery.plugged?'Charging / plugged':'On battery'}`:'Not reported';$('network').textContent=`↓ ${bytes(s.network.down_bytes_sec)} · ↑ ${bytes(s.network.up_bytes_sec)}`;const da=s.disk&&s.disk.activity;$('diskActivity').textContent=da?`↓ ${bytes(da.read_bytes_sec)} · ↑ ${bytes(da.write_bytes_sec)}`:'Not reported';const temps=s.temperatures||[];$('temp').textContent=temps.length?`${temps[0].celsius} °C · ${temps[0].sensor}`:'Unsupported by current sensor driver';showWarnings(s);metric(s.cpu_percent,'cpu','cpuBar');metric(s.memory.percent,'ram','ramBar');metric(s.disk.percent,'disk','diskBar');$('ramNote').textContent=`${(s.memory.used/1073741824).toFixed(1)} / ${(s.memory.total/1073741824).toFixed(1)} GB used`;$('diskNote').textContent=`${(s.disk.free/1073741824).toFixed(1)} GB free on root filesystem`;const rate=s.network.down_bytes_sec+s.network.up_bytes_sec;$('netRate').textContent=bytes(rate).replace('/s','');$('netBar').style.width=Math.min(100,rate/1048576*100)+'%';const procs=s.runtimes||[];$('runtimes').innerHTML=procs.length?procs.map(p=>`<span class="chip">${esc(p.runtime)} · PID ${p.pid}</span>`).join(''):'<span class="chip empty">No Node.js/Bun processes detected</span>';$('updated').textContent='Updated '+new Date(s.timestamp*1000).toLocaleTimeString();}catch(e){if(!lastSeen||Date.now()-lastSeen>6500)setOnline(false);}finally{if(timeoutId)clearTimeout(timeoutId);}}
+
+function showAlert(message,critical=false){
+  $('toastTitle').textContent=critical?'Critical workstation warning':'Workstation warning';
+  $('toastMessage').textContent=message;
+  $('alertToast').classList.toggle('critical',critical);
+  $('alertToast').classList.add('show');
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(closeAlert,10000);
+  if(alertsEnabled){
+    try{if ('vibrate' in navigator) {
+  navigator.vibrate(
+    critical
+      ? [500, 150, 500, 150, 700, 150, 500]
+      : [400, 120, 400, 120, 400]
+  );
+}}catch(e){}
+    playBeep(critical);
+  }
+}
+function closeAlert(){ $('alertToast').classList.remove('show');if(toastTimer)clearTimeout(toastTimer);toastTimer=null; }
+
+const alertSound = new Audio('/sounds/my-alert.mp3');
+alertSound.preload = 'auto';
+alertSound.volume = 1.0;
+
+async function playBeep(critical = false) {
+  try {
+    alertSound.pause();
+    alertSound.currentTime = 0;
+    await alertSound.play();
+  } catch (error) {
+    console.warn('DeskOS alert sound could not play:', error);
+  }
+}
+$('enableAlerts').addEventListener('click',async()=>{alertsEnabled=true;try{const Ctx=window.AudioContext||window.webkitAudioContext;if(Ctx){if(!audioContext)audioContext=new Ctx();if(audioContext.state==='suspended')await audioContext.resume();}}catch(e){}if('vibrate' in navigator)navigator.vibrate([100,60,100]);playBeep(false);$('alertState').textContent='Phone alerts enabled · vibration + sound when supported';$('enableAlerts').textContent='Test alerts';});
+$('enableAlerts').addEventListener('dblclick',()=>{if(alertsEnabled){if('vibrate' in navigator)navigator.vibrate([100,60,100]);playBeep(true);}});
+$('toastClose').addEventListener('click',closeAlert);
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function renderFocus(){$('focusTime').textContent=`${String(Math.floor(focusLeft/60)).padStart(2,'0')}:${String(focusLeft%60).padStart(2,'0')}`;$('focusBtn').textContent=focusRun?'Pause':'Start';$('focusLabel').textContent=focusRun?'Focus session in progress':focusLeft===1500?'Ready when you are':focusLeft===0?'Session complete':'Paused';}
+$('focusBtn').onclick=()=>{focusRun=!focusRun;if(focusInterval)clearInterval(focusInterval);if(focusRun)focusInterval=setInterval(()=>{focusLeft=Math.max(0,focusLeft-1);if(!focusLeft){focusRun=false;clearInterval(focusInterval)}renderFocus()},1000);renderFocus()};$('resetBtn').onclick=()=>{focusRun=false;clearInterval(focusInterval);focusLeft=1500;renderFocus()};$('ambientBtn').onclick=()=>{ambient=!ambient;document.body.classList.toggle('ambient',ambient);$('ambientBtn').textContent=ambient?'Show dashboard':'Ambient clock'};
+let wakeLock=null;
+async function requestDisplayWakeLock(){try{if('wakeLock' in navigator && document.visibilityState==='visible')wakeLock=await navigator.wakeLock.request('screen');}catch(e){/* Requires a supported secure context; Android Stay awake remains the fallback. */}}
+$('fullscreenBtn').addEventListener('click',async()=>{try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen();$('fullscreenBtn').textContent='Exit fullscreen';}else{await document.exitFullscreen();$('fullscreenBtn').textContent='Fullscreen';}}catch(e){$('fullscreenBtn').textContent='Use kiosk mode';}});
+document.addEventListener('fullscreenchange',()=>{$('fullscreenBtn').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen';});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')requestDisplayWakeLock();});
+requestDisplayWakeLock();clockTick();setInterval(clockTick,250);update();setInterval(update,5000);renderFocus();
+$('clockPanel').addEventListener('click',()=>$('ambientBtn').click());
+</script></body></html>
