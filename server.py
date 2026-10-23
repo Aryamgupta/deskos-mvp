@@ -41,6 +41,21 @@ def safe_temperature():
     return result
 
 
+def select_cpu_temperature(readings):
+    """Return a clearly CPU-labelled sensor reading, or None when ambiguous."""
+    priorities = (
+        ("cpu",),
+        ("tctl", "tdie"),
+        ("package id",),
+    )
+    for terms in priorities:
+        for reading in readings:
+            sensor = str(reading.get("sensor", "")).lower()
+            if any(term in sensor for term in terms):
+                return reading
+    return None
+
+
 def collect_status():
     global _NET_PREV, _NET_TIME, _DISK_PREV, _DISK_TIME
     now = time.monotonic()
@@ -94,6 +109,8 @@ def collect_status():
     processes = _PROCESS_CACHE["items"]
 
     vm = psutil.virtual_memory()
+    temps = safe_temperature()
+    cpu_temperature = select_cpu_temperature(temps)
     return {
         "hostname": socket.gethostname(),
         "timestamp": time.time(),
@@ -103,8 +120,14 @@ def collect_status():
         "memory": {"used": vm.used, "total": vm.total, "percent": vm.percent},
         "disk": {"used": disk.used, "total": disk.total, "free": disk.free, "percent": disk.percent, "activity": disk_activity},
         "battery": battery,
-        "temperatures": (temps := safe_temperature()),
-        "capabilities": {"battery": battery is not None, "temperature": bool(temps), "disk_activity": disk_activity is not None},
+        "temperatures": temps,
+        "cpu_temperature": cpu_temperature,
+        "capabilities": {
+            "battery": battery is not None,
+            "temperature": bool(temps),
+            "cpu_temperature": cpu_temperature is not None,
+            "disk_activity": disk_activity is not None,
+        },
         "network": {"down_bytes_sec": round(down), "up_bytes_sec": round(up)},
         "runtimes": processes[:12],
     }
@@ -132,6 +155,16 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(500, {"error": "Could not collect system status", "detail": str(exc)[:160]})
         else:
             super().do_GET()
+
+    def do_HEAD(self):
+        if self.path.split("?", 1)[0] == "/health":
+            body = json.dumps({"ok": True, "service": "DeskOS"}).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+        else:
+            super().do_HEAD()
 
     def send_json(self, code, data):
         body = json.dumps(data).encode("utf-8")

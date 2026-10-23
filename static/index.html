@@ -117,17 +117,20 @@ function showWarnings(s){
   const ram=Number(s.memory?.percent)||0;
   cpuHot=cpu>=90?cpuHot+1:0;
   ramHot=ram>=90?ramHot+1:0;
-  const temps=s.temperatures||[];
-  const hottest=temps.reduce((m,t)=>Math.max(m,Number(t.celsius)||0),0);
-  tempHot=hottest>=85?tempHot+1:0;
-  if(cpuHot>=3)warnings.push({text:`High CPU usage sustained (${Math.round(cpu)}%). Check active development tasks if this persists.`,critical:false});
-  if(ramHot>=3)warnings.push({text:`RAM usage is high (${Math.round(ram)}%). Consider closing unused applications if the system feels slow.`,critical:false});
-  if(tempHot>=2)warnings.push({text:`High CPU/system temperature (${Math.round(hottest)} °C), if the reported sensor is accurate. Check ventilation and workload.`,critical:hottest>=95});
+  const cpuTemperature=Number(s.cpu_temperature?.celsius);
+  const hottest=Number.isFinite(cpuTemperature)?cpuTemperature:null;
+  tempHot=hottest!==null&&hottest>=85?tempHot+1:0;
+  if(cpuHot>=3)warnings.push({key:'cpu-high',text:`High CPU usage sustained (${Math.round(cpu)}%). Check active development tasks if this persists.`,critical:false});
+  if(ramHot>=3)warnings.push({key:'ram-high',text:`RAM usage is high (${Math.round(ram)}%). Consider closing unused applications if the system feels slow.`,critical:false});
+  if(tempHot>=2)warnings.push({key:'cpu-temperature-high',text:`High CPU temperature (${Math.round(hottest)} °C). Check ventilation and workload.`,critical:hottest>=95});
   const rootFree=Number(s.disk?.free)||0,rootTotal=Number(s.disk?.total)||0;
-  if(rootTotal>0&&rootFree/rootTotal<0.08)warnings.push({text:'Low free storage: less than 8% remains on the monitored filesystem.',critical:false});
+  if(rootTotal>0&&rootFree/rootTotal<0.08)warnings.push({key:'disk-low',text:'Low free storage: less than 8% remains on the monitored filesystem.',critical:false});
   $('warnings').innerHTML=warnings.length?warnings.map(w=>`<div class="warning ${w.critical?'critical':''}">${esc(w.text)}</div>`).join(''):'<div class="warning ok">System status looks normal. Threshold checks are lightweight and sample-based.</div>';
-  const warningKey=warnings.map(w=>w.text).join('|');
-  if(warningKey && warningKey!==lastWarningKey){const critical=warnings.some(w=>w.critical);showAlert(warnings[0].text,critical);}
+  const activeWarningKeys=warnings.map(w=>w.key);
+  const previousWarningKeys=lastWarningKey?lastWarningKey.split('|'):[];
+  const newWarning=warnings.find(w=>!previousWarningKeys.includes(w.key));
+  if(newWarning)showAlert(newWarning.text,newWarning.critical);
+  const warningKey=activeWarningKeys.join('|');
   lastWarningKey=warningKey;
 }
 function setOnline(on){
@@ -145,21 +148,23 @@ function setOnline(on){
     lastOnline=on;
   }
   if(!on){
+    cpuHot=0;ramHot=0;tempHot=0;lastWarningKey='';
     $('hostname').textContent='Laptop unavailable';$('hostSub').textContent='Waiting for DeskOS service to return';
     $('uptime').textContent='—';$('battery').textContent='—';$('network').textContent='—';$('diskActivity').textContent='—';$('temp').textContent='—';
     $('cpu').innerHTML='—<span class="unit"> %</span>';$('ram').innerHTML='—<span class="unit"> %</span>';$('disk').innerHTML='—<span class="unit"> %</span>';
     ['cpuBar','ramBar'].forEach(i=>$(i).style.strokeDasharray='0 100');$('netRate').textContent='—';$('runtimes').innerHTML='<span class="chip empty">Laptop offline</span>';
   }
 }
-async function update(){let timeoutId;const controller=new AbortController();try{timeoutId=setTimeout(()=>controller.abort(),2500);const r=await fetch('/api/status',{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error('status');const s=await r.json();lastSeen=Date.now();setOnline(true);$('hostname').textContent=s.hostname||'Ubuntu workstation';$('hostSub').textContent='Local service active · refresh every 5 seconds';$('uptime').textContent=duration(s.uptime_seconds);$('battery').textContent=s.battery?`${s.battery.percent}% · ${s.battery.plugged?'Charging / plugged':'On battery'}`:'Not reported';$('network').textContent=`↓ ${bytes(s.network.down_bytes_sec)} · ↑ ${bytes(s.network.up_bytes_sec)}`;const da=s.disk&&s.disk.activity;$('diskActivity').textContent=da?`↓ ${bytes(da.read_bytes_sec)} · ↑ ${bytes(da.write_bytes_sec)}`:'Not reported';const temps=s.temperatures||[];$('temp').textContent=temps.length?`${temps[0].celsius} °C · ${temps[0].sensor}`:'Unsupported by current sensor driver';showWarnings(s);metric(s.cpu_percent,'cpu','cpuBar');metric(s.memory.percent,'ram','ramBar');metric(s.disk.percent,'disk','diskBar');$('ramNote').textContent=`${(s.memory.used/1073741824).toFixed(1)} / ${(s.memory.total/1073741824).toFixed(1)} GB used`;$('diskNote').textContent=`${(s.disk.free/1073741824).toFixed(1)} GB free on root filesystem`;const rate=s.network.down_bytes_sec+s.network.up_bytes_sec;$('netRate').textContent=bytes(rate).replace('/s','');$('netBar').style.width=Math.min(100,rate/1048576*100)+'%';const procs=s.runtimes||[];$('runtimes').innerHTML=procs.length?procs.map(p=>`<span class="chip">${esc(p.runtime)} · PID ${p.pid}</span>`).join(''):'<span class="chip empty">No Node.js/Bun processes detected</span>';$('updated').textContent='Updated '+new Date(s.timestamp*1000).toLocaleTimeString();}catch(e){if(!lastSeen||Date.now()-lastSeen>6500)setOnline(false);}finally{if(timeoutId)clearTimeout(timeoutId);}}
+async function update(){let timeoutId;const controller=new AbortController();try{timeoutId=setTimeout(()=>controller.abort(),2500);const r=await fetch('/api/status',{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error('status');const s=await r.json();lastSeen=Date.now();setOnline(true);$('hostname').textContent=s.hostname||'Ubuntu workstation';$('hostSub').textContent='Local service active · refresh every 5 seconds';$('uptime').textContent=duration(s.uptime_seconds);$('battery').textContent=s.battery?`${s.battery.percent}% · ${s.battery.plugged?'Charging / plugged':'On battery'}`:'Not reported';$('network').textContent=`↓ ${bytes(s.network.down_bytes_sec)} · ↑ ${bytes(s.network.up_bytes_sec)}`;const da=s.disk&&s.disk.activity;$('diskActivity').textContent=da?`↓ ${bytes(da.read_bytes_sec)} · ↑ ${bytes(da.write_bytes_sec)}`:'Not reported';const cpuTemperature=s.cpu_temperature;$('temp').textContent=cpuTemperature?`${cpuTemperature.celsius} °C · ${cpuTemperature.sensor}`:'CPU temperature unavailable';showWarnings(s);metric(s.cpu_percent,'cpu','cpuBar');metric(s.memory.percent,'ram','ramBar');metric(s.disk.percent,'disk','diskBar');$('ramNote').textContent=`${(s.memory.used/1073741824).toFixed(1)} / ${(s.memory.total/1073741824).toFixed(1)} GB used`;$('diskNote').textContent=`${(s.disk.free/1073741824).toFixed(1)} GB free on root filesystem`;const rate=s.network.down_bytes_sec+s.network.up_bytes_sec;$('netRate').textContent=bytes(rate).replace('/s','');$('netBar').style.width=Math.min(100,rate/1048576*100)+'%';const procs=s.runtimes||[];$('runtimes').innerHTML=procs.length?procs.map(p=>`<span class="chip">${esc(p.runtime)} · PID ${p.pid}</span>`).join(''):'<span class="chip empty">No Node.js/Bun processes detected</span>';$('updated').textContent='Updated '+new Date(s.timestamp*1000).toLocaleTimeString();}catch(e){if(!lastSeen||Date.now()-lastSeen>6500)setOnline(false);}finally{if(timeoutId)clearTimeout(timeoutId);}}
 
 function showAlert(message,critical=false){
+  if($('alertToast').classList.contains('show')&&$('alertToast').classList.contains('critical')&&!critical)return;
   $('toastTitle').textContent=critical?'Critical workstation warning':'Workstation warning';
   $('toastMessage').textContent=message;
   $('alertToast').classList.toggle('critical',critical);
   $('alertToast').classList.add('show');
   if(toastTimer)clearTimeout(toastTimer);
-  toastTimer=setTimeout(closeAlert,10000);
+  if(!critical)toastTimer=setTimeout(closeAlert,10000);
   if(alertsEnabled){
     try{if ('vibrate' in navigator) {
   navigator.vibrate(

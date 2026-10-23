@@ -26,7 +26,7 @@ Monitor your laptop's system status from your phone.
 - Disk read/write activity.
 - System uptime.
 - Battery status when available.
-- CPU temperature when supported by the system's sensor drivers.
+- CPU temperature only when a sensor has a recognizable CPU label; otherwise it is shown as unavailable.
 
 ### ⚠️ Workstation alerts
 DeskOS checks system metrics and displays warnings when configured thresholds are reached.
@@ -35,8 +35,8 @@ DeskOS checks system metrics and displays warnings when configured thresholds ar
 - Sustained high memory usage.
 - High reported system temperature.
 - Low available disk space.
-- Warning popups with a manual dismiss button.
-- Automatic popup dismissal after 10 seconds.
+- Warning popups for newly active warning conditions, rather than every changed metric value.
+- Non-critical popups dismiss automatically after 10 seconds; critical warnings require manual acknowledgement.
 - Optional custom alert audio.
 - Browser-supported phone vibration for warnings.
 - Separate warning and critical alert presentation.
@@ -178,7 +178,7 @@ For a project whose backend entry point is `server.py`:
 python server.py
 ```
 
-If you need to select the listening address and port, and your backend supports the corresponding environment variables, use:
+The server defaults to port `8765`. To use port `8769` (as in the systemd example below), set the listening address and port explicitly:
 
 ```bash
 DESKOS_HOST=0.0.0.0 DESKOS_PORT=8769 python server.py
@@ -213,6 +213,16 @@ Use your laptop's actual IP address and the port configured for your server.
 5. Enable Android's **Stay awake while charging** option if you want the display to remain on while charging.
 
 Browser-based vibration and sound are subject to device and browser limitations.
+
+### Run regression tests
+
+From the project root, run the backend tests with:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The tests exercise the local health/status endpoints and CPU-temperature sensor selection. They do not verify browser behavior or physical phone alerts.
 
 ---
 
