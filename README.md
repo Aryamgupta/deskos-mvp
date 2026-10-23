@@ -57,6 +57,14 @@ Process detection is informational; it does not currently establish whether an a
 - Reset functionality.
 - Remaining-time display.
 
+### ⏰ Persistent local reminders
+- Create one-time, daily, or weekly reminders from the dashboard.
+- Store reminder schedules and pending notifications in a local SQLite database.
+- Edit, complete, or cancel active reminders.
+- Due notifications remain pending until acknowledged; the service dispatches them even when the browser is closed.
+- When a recurring reminder was missed during downtime, DeskOS delivers one catch-up notification and schedules its next future occurrence.
+- Recurring schedules follow the browser's IANA timezone and local wall-clock time.
+
 ### 📱 Phone-friendly experience
 - Responsive dashboard for smaller screens.
 - Fullscreen mode.
@@ -214,6 +222,25 @@ Use your laptop's actual IP address and the port configured for your server.
 
 Browser-based vibration and sound are subject to device and browser limitations.
 
+## ⏰ Reminder API and recovery behavior
+
+Reminder endpoints are served by the same local DeskOS process:
+
+| Method and route | Behavior |
+|---|---|
+| `GET /api/reminders` | List active reminders |
+| `GET /api/reminders?all=1` | Include completed and cancelled reminders |
+| `POST /api/reminders` | Create a reminder with `title`, timezone-aware ISO-8601 `due_at`, optional `recurrence` (`none`, `daily`, or `weekly`), and optional IANA `timezone` |
+| `PATCH /api/reminders/<id>` | Edit an active reminder's title, due time, recurrence, or timezone |
+| `POST /api/reminders/<id>/complete` | Complete an active reminder |
+| `DELETE /api/reminders/<id>` | Cancel an active reminder without deleting its history |
+| `GET /api/notifications` | List due notifications not yet acknowledged |
+| `POST /api/notifications/<id>/ack` | Acknowledge a delivered notification |
+
+One-time reminders are marked complete when dispatched. If DeskOS was stopped when one became due, it creates the pending notification after restart. For recurring reminders, downtime produces one notification for the missed schedule; missed repeats are coalesced, and the next future occurrence is retained. Notification records remain until acknowledged. These APIs have no authentication: use only on a trusted LAN, and never port-forward DeskOS to the public internet.
+
+The database is `deskos.sqlite3` inside `DESKOS_DATA_DIR`. The default is `~/.local/share/deskos`; DeskOS restricts the directory to the service user and the database file to owner-only access. Back up the data directory while the service is stopped to preserve SQLite consistency.
+
 ### Run regression tests
 
 From the project root, run the backend tests with:
@@ -281,6 +308,8 @@ The values represent alternating vibration and pause durations in milliseconds. 
 ## 🔄 Run DeskOS automatically with systemd
 
 You can run the backend as a background service so it starts automatically when Ubuntu boots.
+
+The repository includes `install-deskos-service.sh`; from the intended checkout, run `./install-deskos-service.sh` to create/update the unit. It defaults to port `8769`, binds to `0.0.0.0`, and stores persistent data under `$XDG_DATA_HOME/deskos` (or `~/.local/share/deskos`). Set `DESKOS_PORT`, `DESKOS_HOST`, or `DESKOS_DATA_DIR` before running it to override those defaults. The script refuses to replace an active DeskOS service that points at a different checkout unless invoked with `./install-deskos-service.sh --replace-existing`. That option only replaces the unit; it does not migrate another checkout's data. Confirm the paths and back up any existing data before replacing a deployment.
 
 Create a service file:
 

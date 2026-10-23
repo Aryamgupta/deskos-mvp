@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""DeskOS MVP: read-only local workstation dashboard for Ubuntu."""
+"""DeskOS local workstation dashboard and reminder service for Ubuntu."""
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
+from threading import Event, Lock, Thread
+from urllib.parse import unquote, urlsplit
 import json, os, socket, time
-from threading import Lock
 import psutil
+import sqlite3
+
+from reminder_store import ReminderStore
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
@@ -134,6 +138,8 @@ def collect_status():
 
 
 class Handler(SimpleHTTPRequestHandler):
+    reminder_store = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC), **kwargs)
 
@@ -144,17 +150,139 @@ class Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
-        if self.path.split("?", 1)[0] == "/health":
+        path = urlsplit(self.path).path
+        if path == "/health":
             self.send_json(200, {"ok": True, "service": "DeskOS"})
-        elif self.path.split("?", 1)[0] == "/api/status":
+        elif path == "/api/status":
             try:
                 # Serialize collection to avoid overlapping sensor/process scans if two displays connect.
                 with CACHE_LOCK:
                     self.send_json(200, collect_status())
             except Exception as exc:
                 self.send_json(500, {"error": "Could not collect system status", "detail": str(exc)[:160]})
+        elif path == "/api/reminders":
+            if not self.require_reminder_store():
+                return
+            include_inactive = urlsplit(self.path).query == "all=1"
+            try:
+                self.send_json(200, {"reminders": self.reminder_store.list_reminders(include_inactive)})
+            except sqlite3.Error:
+                self.log_error("Could not list reminders")
+                self.send_json(500, {"error": "Could not load reminders"})
+        elif path == "/api/notifications":
+            if not self.require_reminder_store():
+                return
+            try:
+                self.send_json(200, {"notifications": self.reminder_store.list_pending_notifications()})
+            except sqlite3.Error:
+                self.log_error("Could not list pending notifications")
+                self.send_json(500, {"error": "Could not load notifications"})
+        elif path.startswith("/api/"):
+            self.route_reminder_item("GET", path)
         else:
             super().do_GET()
+
+    def do_POST(self):
+        path = urlsplit(self.path).path
+        if path == "/api/reminders":
+            if not self.require_reminder_store():
+                return
+            try:
+                payload = self.read_json()
+                reminder = self.reminder_store.create(
+                    payload.get("title"),
+                    payload.get("due_at"),
+                    payload.get("recurrence", "none"),
+                    payload.get("timezone"),
+                )
+                self.send_json(201, {"reminder": reminder})
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                self.send_json(400, {"error": str(exc)})
+            except sqlite3.Error:
+                self.log_error("Could not create reminder")
+                self.send_json(500, {"error": "Could not save reminder"})
+        elif path.startswith("/api/"):
+            self.route_reminder_item("POST", path)
+        else:
+            self.send_json(404, {"error": "Endpoint not found"})
+
+    def do_PATCH(self):
+        self.route_reminder_item("PATCH", urlsplit(self.path).path)
+
+    def do_DELETE(self):
+        self.route_reminder_item("DELETE", urlsplit(self.path).path)
+
+    def require_reminder_store(self):
+        if self.reminder_store is None:
+            self.send_json(503, {"error": "Reminder storage is not initialized"})
+            return False
+        return True
+
+    def read_json(self):
+        if self.headers.get_content_type() != "application/json":
+            raise ValueError("Content-Type must be application/json")
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as exc:
+            raise ValueError("Invalid Content-Length") from exc
+        if length < 1 or length > 8192:
+            raise ValueError("Request body must be between 1 and 8192 bytes")
+        payload = json.loads(self.rfile.read(length))
+        if not isinstance(payload, dict):
+            raise ValueError("JSON request body must be an object")
+        return payload
+
+    def route_reminder_item(self, method, path):
+        if not self.require_reminder_store():
+            return
+        parts = [unquote(part) for part in path.strip("/").split("/")]
+        if len(parts) == 3 and parts[0] == "api" and parts[1] == "reminders":
+            reminder_id = parts[2]
+            try:
+                if method == "PATCH":
+                    reminder = self.reminder_store.update(reminder_id, self.read_json())
+                    if reminder is None:
+                        self.send_json(404, {"error": "Reminder not found"})
+                    else:
+                        self.send_json(200, {"reminder": reminder})
+                    return
+                if method == "DELETE":
+                    if self.reminder_store.cancel(reminder_id):
+                        self.send_json(200, {"cancelled": True})
+                    else:
+                        self.send_json(404, {"error": "Reminder not found"})
+                    return
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                self.send_json(400, {"error": str(exc)})
+                return
+            except sqlite3.Error:
+                self.log_error("Could not update reminder")
+                self.send_json(500, {"error": "Could not update reminder"})
+                return
+        if len(parts) == 4 and parts[:2] == ["api", "reminders"] and parts[3] == "complete" and method == "POST":
+            try:
+                if self.reminder_store.complete(parts[2]):
+                    self.send_json(200, {"completed": True})
+                else:
+                    self.send_json(404, {"error": "Reminder not found"})
+            except sqlite3.Error:
+                self.log_error("Could not complete reminder")
+                self.send_json(500, {"error": "Could not complete reminder"})
+            return
+        if len(parts) == 4 and parts[:2] == ["api", "notifications"] and parts[3] == "ack" and method == "POST":
+            try:
+                if self.reminder_store.acknowledge(parts[2]):
+                    self.send_json(200, {"acknowledged": True})
+                else:
+                    self.send_json(404, {"error": "Notification not found"})
+            except sqlite3.Error:
+                self.log_error("Could not acknowledge notification")
+                self.send_json(500, {"error": "Could not acknowledge notification"})
+            return
+        self.send_json(404, {"error": "Endpoint not found"})
+
+    def log_error(self, message):
+        print(f"[DeskOS] {message}", flush=True)
 
     def do_HEAD(self):
         if self.path.split("?", 1)[0] == "/health":
@@ -181,7 +309,33 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     host = os.environ.get("DESKOS_HOST", "0.0.0.0")
     port = int(os.environ.get("DESKOS_PORT", "8765"))
+    data_dir = Path(os.environ.get("DESKOS_DATA_DIR", str(Path.home() / ".local/share/deskos"))).expanduser()
+    data_dir.mkdir(parents=True, exist_ok=True)
+    Handler.reminder_store = ReminderStore(data_dir / "deskos.sqlite3")
     print(f"DeskOS is starting on http://{host}:{port}")
     print("Low-overhead mode: process scan every 20s; temperature sensors cached for 15s.")
-    print("Read-only dashboard. Keep it on a trusted home network; do not port-forward this port.")
-    ThreadingHTTPServer((host, port), Handler).serve_forever()
+    print(f"Reminder data directory: {data_dir}")
+    print("Keep DeskOS on a trusted home network; do not port-forward this port.")
+    server = ThreadingHTTPServer((host, port), Handler)
+
+    class Scheduler(Thread):
+        def __init__(self, store):
+            super().__init__(name="DeskOSReminderScheduler", daemon=True)
+            self.store = store
+            self.stopping = Event()
+
+        def run(self):
+            while not self.stopping.wait(5):
+                try:
+                    self.store.dispatch_due()
+                except sqlite3.Error as exc:
+                    print(f"[DeskOS] Reminder scheduler database error: {exc}", flush=True)
+
+    scheduler = Scheduler(Handler.reminder_store)
+    scheduler.start()
+    try:
+        server.serve_forever()
+    finally:
+        scheduler.stopping.set()
+        scheduler.join(timeout=6)
+        server.server_close()
