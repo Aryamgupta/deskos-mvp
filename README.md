@@ -57,6 +57,13 @@ Process detection is informational; it does not currently establish whether an a
 - Reset functionality.
 - Remaining-time display.
 
+### 🤖 Deterministic local assistant (text MVP)
+- Handles local time, laptop/system status, and reminder list/create/cancel commands.
+- Uses a fixed intent router and explicit tool schemas; it has no model access or shell execution capability.
+- Cancellation asks for confirmation; ambiguous duplicate reminder titles are not cancelled.
+- Unknown or unsupported commands fail safely with examples.
+- This stage accepts typed commands only. Browser speech recognition is intentionally not enabled because it may rely on external services and cannot be assumed to work offline.
+
 ### ⏰ Persistent local reminders
 - Create one-time, daily, or weekly reminders from the dashboard.
 - Store reminder schedules and pending notifications in a local SQLite database.
@@ -240,6 +247,19 @@ Reminder endpoints are served by the same local DeskOS process:
 One-time reminders are marked complete when dispatched. If DeskOS was stopped when one became due, it creates the pending notification after restart. For recurring reminders, downtime produces one notification for the missed schedule; missed repeats are coalesced, and the next future occurrence is retained. Notification records remain until acknowledged. These APIs have no authentication: use only on a trusted LAN, and never port-forward DeskOS to the public internet.
 
 The database is `deskos.sqlite3` inside `DESKOS_DATA_DIR`. The default is `~/.local/share/deskos`; DeskOS restricts the directory to the service user and the database file to owner-only access. Back up the data directory while the service is stopped to preserve SQLite consistency.
+
+## 🤖 Local assistant command MVP
+
+The dashboard's text command panel submits `POST /api/assistant/command` with `{"command":"..."}`. For confirmed reminder cancellation, it sends the same command with `"confirm": true` after an explicit browser confirmation. The fixed router supports:
+
+- `What time is it?`
+- `How is my laptop doing?` or `Is my laptop online?`
+- `Show my reminders`
+- `Remind me to stretch in 10 minutes` (minutes, hours, days, or weeks)
+- `Cancel reminder to stretch` (requires confirmation and an exact unique title)
+- `Stop listening` (there is no microphone session in this text-only MVP)
+
+The request accepts only `command` and `confirm`, with a 500-character command limit. The tool catalog is an explicit allowlist; DeskOS does not expose shell or arbitrary process execution. Voice input, wake-word detection, and local speech recognition remain unimplemented until a local, offline-capable stack can be evaluated on the target hardware.
 
 ### Run regression tests
 

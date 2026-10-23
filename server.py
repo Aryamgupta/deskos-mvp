@@ -8,6 +8,7 @@ import json, os, socket, time
 import psutil
 import sqlite3
 
+from assistant import AssistantRouter
 from reminder_store import ReminderStore
 
 ROOT = Path(__file__).resolve().parent
@@ -184,7 +185,27 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
-        if path == "/api/reminders":
+        if path == "/api/assistant/command":
+            if not self.require_reminder_store():
+                return
+            try:
+                payload = self.read_json()
+                if set(payload) - {"command", "confirm"}:
+                    raise ValueError("Only command and confirm fields are accepted")
+                confirm = payload.get("confirm", False)
+                if not isinstance(confirm, bool):
+                    raise ValueError("confirm must be a boolean")
+                router = AssistantRouter(self.reminder_store, collect_status)
+                self.send_json(200, router.handle(payload.get("command"), confirm))
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                self.send_json(400, {"error": str(exc)})
+            except sqlite3.Error:
+                self.log_error("Assistant command database error")
+                self.send_json(500, {"error": "Could not complete the local command"})
+            except Exception:
+                self.log_error("Assistant command failed")
+                self.send_json(500, {"error": "Could not complete the local command"})
+        elif path == "/api/reminders":
             if not self.require_reminder_store():
                 return
             try:
