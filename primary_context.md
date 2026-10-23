@@ -94,8 +94,8 @@ The Pi installation and authentication issue should remain a separate workstream
 
 Requirements:
 
-- No cloud APIs for core functionality.
-- No external LLM APIs.
+- No cloud APIs for core functionality. An optional Gemini assistant may be used only for explicitly submitted requests after opt-in; it is not core and must fail safely offline.
+- No external LLM APIs for local reminders, monitoring, device health, or deterministic local commands. Gemini is an optional, documented exception for the voice/text assistant only, subject to the cloud-data disclosure and fallback requirements below.
 - No telemetry or third-party analytics.
 - No cloud-based speech recognition.
 - No cloud-based image recognition.
@@ -103,6 +103,8 @@ Requirements:
 - No runtime downloads of models, packages, or application assets.
 - No external DNS dependencies for normal operation.
 - No internet connection required for local reminders, monitoring, or assistant commands.
+
+Distinguish **local core operation** from **cloud-assisted natural-language interpretation**. If Gemini is disabled, offline, out of quota, or fails, local reminders/monitoring remain available; only the flexible Gemini interpretation/response path is unavailable. Never claim the Gemini path itself is offline.
 
 Local communication between trusted DeskOS devices over the home LAN is permitted. Localhost communication is permitted.
 
@@ -185,21 +187,25 @@ Prioritize clear information hierarchy, restrained animations, responsive layout
 
 Do not invent metrics when a source is unavailable. Clearly distinguish unsupported, unavailable, stale, and genuinely zero-valued measurements.
 
-### Subsystem 2: Local Voice Assistant
+### Subsystem 2: Voice Assistant (local capture, optional Gemini cloud reasoning)
 
-The intended wake phrase is:
+The optional future wake phrase is:
 
 **"Hello Desk"**
 
-The long-term experience should support:
+The first voice MVP starts from a user-pressed push-to-talk control; local wake-word detection is a later optional capability, not required for the initial release. A small on-device wake-word detector is distinct from a generative LLM and is technically possible, but continuous microphone access from a browser/PWA is not reliable when Android backgrounds or suspends the page. Dependable screen-off listening may require a native Android app, microphone foreground service, persistent notification, permissions, and battery-management setup; verify feasibility and battery cost on the actual Realme C2 before committing to that work.
 
-1. Detecting the wake phrase.
-2. Capturing a voice command.
-3. Converting speech into text locally.
-4. Interpreting the command.
-5. Executing an approved local action.
-6. Responding through text or local speech synthesis.
-7. Returning to the listening state.
+The planned hybrid experience should support:
+
+1. Either user-started push-to-talk in the initial MVP, or (later, opt-in) locally detecting the wake phrase.
+2. Capturing a single voice command after the explicit trigger.
+3. Converting speech into text on the phone/device where on-device recognition is verified; do not assume browser recognition is local.
+4. Showing the transcript to the user and sending it to Gemini only after explicit cloud-assistant opt-in and user submission.
+5. Receiving a constrained intent/tool proposal from Gemini.
+6. Validating and executing an approved action in the local DeskOS backend.
+7. Sending only the minimum relevant tool result back to Gemini for a concise reply if the user has opted in to result sharing; otherwise format the result locally.
+8. Speaking the response with the phone/browser's available on-device text-to-speech, if verified, or displaying it as text.
+9. Returning to idle; microphone capture stops after each utterance. Always-on wake listening remains off unless separately enabled and verified.
 
 Initial commands should include:
 
@@ -212,9 +218,9 @@ Initial commands should include:
 - "Show today's productivity summary."
 - "Stop listening."
 
-The initial version should prioritize a reliable command pipeline rather than a fully autonomous, unrestricted agent.
+The initial version should prioritize a reliable, user-confirmed command pipeline rather than a fully autonomous, unrestricted agent. Use push-to-talk first; do not run an always-listening wake-word service until its local processing, battery, and privacy behavior are verified on the Realme C2.
 
-Speech recognition, wake-word detection, command interpretation, and text-to-speech must be evaluated separately. Do not assume that one model can perform every function efficiently on a Raspberry Pi 4.
+Speech recognition, wake-word detection, command interpretation, and text-to-speech are separate components and must be evaluated separately. Do not assume that browser speech recognition is on-device, or that one model can perform every function efficiently on a Raspberry Pi 4. The chosen direction is to avoid a local LLM on the current laptop/Pi-class hardware for now; Gemini is an optional cloud interpreter, while local wake detection (if later enabled), speech capture/transcription, and device speech output must be verified independently. If truly local speech transcription is not supported at adequate quality on the phone, keep push-to-talk text entry as the fallback instead of silently using cloud transcription. If always-on detection cannot pass the Realme C2 battery, privacy, and background-operation checks, retain push-to-talk only.
 
 Benchmark candidate models on the actual target hardware before committing to a model architecture.
 
@@ -281,9 +287,9 @@ Start with low-cost presence detection or a manual presence toggle. Add more sop
 
 Do not equate screen activity with productivity. Present derived metrics as estimates, explain how they are calculated, and avoid unsupported conclusions about people.
 
-### Subsystem 6: Local Assistant Intelligence
+### Subsystem 6: Controlled Assistant Intelligence (Gemini-assisted, local execution)
 
-The assistant should eventually understand natural-language commands and coordinate local tools.
+The assistant should understand natural-language commands and coordinate local tools. The current candidate is the Gemini API for interpretation and optional response phrasing; this deliberately makes the natural-language assistant dependent on internet access and a third-party service. Core monitoring, reminders, deterministic commands, and safety checks must remain local and usable if Gemini is unavailable.
 
 Its capabilities should be exposed through a controlled tool interface, such as:
 
@@ -295,11 +301,11 @@ Its capabilities should be exposed through a controlled tool interface, such as:
 - `get_productivity_summary`
 - `get_recent_alerts`
 
-The model must not receive unrestricted shell access.
+The model must not receive unrestricted shell access. It returns an intent or function-call proposal only; the DeskOS backend remains the sole authority that validates and executes local operations.
 
-Use explicit tool schemas, argument validation, permission checks, execution timeouts, and auditable action results.
+Use explicit tool schemas, argument validation, permission checks, execution timeouts, and auditable action results. Keep Gemini behind an explicit opt-in and provider adapter. On the unpaid tier, prompts and responses may be used to improve Google products and may be reviewed; therefore never send audio, camera data, credentials, full metric snapshots, or complete reminder lists. Sending user transcripts and even minimal action results to a third party requires a clear disclosure and explicit opt-in. Sensitive or non-consented requests must use deterministic local routing or fail to text/manual handling.
 
-Begin with deterministic intent routing and rule-based command handling. Add a locally hosted language model only if it materially improves usability and can run within the hardware budget.
+Do not add a locally hosted LLM at this stage. Retain the deterministic router as an offline fallback and use Gemini only for natural-language interpretation of explicitly submitted transcripts, subject to the separate privacy, quota, eligibility, and rate-limit gates in docs/gemini-assistant-plan.md.
 
 ---
 
@@ -401,7 +407,7 @@ Preferred characteristics:
 - SQLite for initial persistent storage.
 - Linux service management using systemd.
 - Local network APIs.
-- Local speech and inference tools selected through measured benchmarks.
+- On-device speech recognition and text-to-speech only if verified on the Realme C2; optional Gemini API for natural-language command interpretation after explicit consent and privacy review.
 - Automated tests and straightforward deployment scripts.
 
 Python is a reasonable candidate for hardware monitoring, scheduling, and local AI integration. JavaScript or TypeScript may remain appropriate for an existing Node.js or Bun.js backend.
@@ -498,24 +504,38 @@ Acceptance criteria:
 - Missed reminders have a defined recovery policy.
 - Notification behavior is tested on the actual phone.
 
-### Phase 4 — Voice assistant MVP
+### Phase 4 — Hybrid voice assistant MVP (local speech I/O, optional Gemini)
 
 Objectives:
 
-- Evaluate local wake-word detection.
-- Evaluate local speech recognition.
-- Build a deterministic command router.
-- Integrate the reminder and system-status tools.
-- Add a local spoken or text response.
-- Provide listening-state controls and privacy indicators.
+- Start with push-to-talk; do not begin always-on wake-word detection.
+- Treat “Hello Desk” wake-word detection as a later optional milestone: first use push-to-talk, then benchmark a lightweight local wake detector on the Realme C2. A browser page may not stay active with the screen off; reliable background wake may require a native Android foreground service with a persistent notification and extra permissions.
+- Verify whether the Realme C2/browser can transcribe speech on-device and use on-device TTS. Document browser/Android requirements and test suspended/background behavior. Do not silently substitute cloud speech recognition.
+- Show the transcript for review/edit before any Gemini request.
+- Add a Gemini provider adapter for intent classification/structured tool proposals, disabled by default until the terms, supported region, privacy/consent, quota, and free-tier data-use gates are accepted.
+- Keep deterministic local intent routing as a fallback and as the route for sensitive or unconsented requests.
+- Validate Gemini's proposed tool name/arguments against the fixed local allowlist and existing business rules; execute tools only in the local backend.
+- After execution, prefer local response templates. If Gemini response phrasing is enabled, send only the minimum necessary result and require separate consent for that data flow.
+- Speak responses using verified local/device TTS; otherwise show text. Never send audio to Gemini as part of this MVP.
+- Add listening state, microphone indicator, cloud-provider indicator, and explicit stop/cancel controls.
 
 Acceptance criteria:
 
-- The wake phrase and supported commands work without internet access.
-- The system does not execute unapproved arbitrary commands.
-- Audio processing and model memory use are measured.
-- The assistant can be stopped immediately.
-- Unsupported commands fail safely and explain why.
+- Local reminders, monitoring, deterministic commands, and text UI continue to work with internet disconnected or Gemini disabled.
+- No audio leaves the phone; transcript sharing is visibly disclosed and requires opt-in plus an explicit send action.
+- The system validates all proposed tool calls; cancellation still requires user confirmation; no shell/arbitrary tool access exists.
+- Local speech recognition/TTS claims are confirmed on the actual Realme C2. Unsupported device speech behavior falls back to typed text/visible response.
+- Gemini quota exhaustion, 429, timeout, invalid key, provider outage, malformed output, and unsupported intents fail safely and preserve local functionality.
+- Unpaid/free-tier API evaluation uses synthetic or otherwise non-sensitive phrases only. Real voice transcripts, reminder titles, and status data are sent only if the provider tier, terms, and explicit user consent are acceptable; otherwise use local deterministic routing or text/manual fallback.
+- Latency, request count, memory/resource use, and accuracy are measured with synthetic test phrases; model/provider and quota are configurable, not assumed fixed.
+- The assistant can be stopped immediately and is not continuously listening.
+
+Wake-word acceptance criteria, if that optional feature proceeds:
+
+- Wake-word audio processing remains on-device and raw audio is not retained or uploaded.
+- Listening is opt-in, visibly indicated, and can be stopped immediately.
+- False-trigger/missed-trigger rates, battery use, device heat, and screen-off/background behavior are measured on the actual phone.
+- If the browser/PWA cannot reliably support the required background behavior, either scope a separate native Android foreground-service client or keep push-to-talk; do not claim always-on support that has not been verified.
 
 ### Phase 5 — Raspberry Pi deployment
 
@@ -558,15 +578,15 @@ Acceptance criteria:
 - No raw video is retained by default.
 - The application remains responsive on the existing hardware.
 
-### Phase 7 — Local AI orchestration
+### Phase 7 — Assistant orchestration hardening (no local LLM planned)
 
 Objectives:
 
-- Introduce a structured local tool interface.
-- Add natural-language intent handling.
-- Evaluate a compact local model if necessary.
-- Enforce tool permissions and execution boundaries.
-- Add action logs and recovery behavior.
+- Harden the structured local tool interface used by both deterministic routing and the Gemini adapter.
+- Improve natural-language routing using Gemini only if phase 4 privacy, terms, quota, and performance gates pass; otherwise retain deterministic local routing.
+- Do not add a local LLM unless hardware changes materially and a new benchmark justifies it.
+- Enforce tool permissions, strict schemas, confirmation, timeouts, and execution boundaries independently of model output.
+- Add privacy-preserving action outcomes, provider error handling, and recovery behavior; do not retain prompts/responses by default.
 
 Acceptance criteria:
 
@@ -574,7 +594,7 @@ Acceptance criteria:
 - The assistant cannot bypass permissions through model-generated text.
 - Critical operations require confirmation where appropriate.
 - Core functionality remains available without an AI model.
-- All inference and tool execution remain local.
+- Local tool execution remains local. Gemini inference is the explicitly disclosed cloud exception; with Gemini disabled or unreachable, core operation and deterministic assistant behavior remain local.
 
 ---
 

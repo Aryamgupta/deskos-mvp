@@ -14,12 +14,13 @@ fi
 
 PROJECT_DIR="$(pwd)"
 SERVICE_NAME="deskos"
-PORT="${DESKOS_PORT:-8769}"
+PORT="${DESKOS_PORT:-8765}"
 HOST="${DESKOS_HOST:-0.0.0.0}"
 RUN_USER="$(id -un)"
 RUN_GROUP="$(id -gn)"
 DATA_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}"
 DATA_DIR="${DESKOS_DATA_DIR:-${DATA_ROOT}/deskos}"
+GEMINI_ENV_FILE="${DESKOS_GEMINI_ENV_FILE:-$HOME/.config/deskos/gemini.env}"
 
 if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
     echo "Error: DESKOS_PORT must be an integer from 1 to 65535."
@@ -54,6 +55,7 @@ echo "Python:  $PYTHON"
 echo "Port:    $PORT"
 echo "Host:    $HOST"
 echo "Data:    $DATA_DIR"
+echo "Gemini environment file: $GEMINI_ENV_FILE (optional; key value is not printed)"
 
 mkdir -p "$DATA_DIR"
 chmod 700 "$DATA_DIR"
@@ -71,6 +73,7 @@ WorkingDirectory=${PROJECT_DIR}
 Environment=DESKOS_HOST=${HOST}
 Environment=DESKOS_PORT=${PORT}
 Environment=DESKOS_DATA_DIR=${DATA_DIR}
+EnvironmentFile=-${GEMINI_ENV_FILE}
 ExecStart=${PYTHON} ${PROJECT_DIR}/server.py
 Restart=on-failure
 RestartSec=3

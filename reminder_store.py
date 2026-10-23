@@ -125,6 +125,11 @@ class ReminderStore:
                 );
                 CREATE INDEX IF NOT EXISTS notifications_pending_idx
                     ON notifications(acknowledged_at, created_at);
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
 
@@ -266,3 +271,25 @@ class ReminderStore:
             )
             exists = connection.execute("SELECT 1 FROM notifications WHERE id = ?", (notification_id,)).fetchone()
         return exists is not None
+
+    def get_setting(self, key: str, default: str | None = None) -> str | None:
+        """Return a persisted setting value, or default when absent."""
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError("setting key must be a non-empty string")
+        with self.connection() as connection:
+            row = connection.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row is not None else default
+
+    def set_setting(self, key: str, value: str) -> None:
+        """Persist a setting value, creating or updating the row."""
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError("setting key must be a non-empty string")
+        if not isinstance(value, str):
+            raise ValueError("setting value must be a string")
+        now_text = utc_string(datetime.now(UTC))
+        with self.connection() as connection:
+            connection.execute(
+                """INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+                   ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at""",
+                (key, value, now_text),
+            )

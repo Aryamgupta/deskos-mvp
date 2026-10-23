@@ -261,6 +261,30 @@ The dashboard's text command panel submits `POST /api/assistant/command` with `{
 
 The request accepts only `command` and `confirm`, with a 500-character command limit. The tool catalog is an explicit allowlist; DeskOS does not expose shell or arbitrary process execution. Voice input, wake-word detection, and local speech recognition remain unimplemented until a local, offline-capable stack can be evaluated on the target hardware.
 
+The local-model evaluation is documented in [docs/local-llm-evaluation.md](docs/local-llm-evaluation.md). The proposed voice flow is local/on-device speech-to-text, user-reviewed transcript, optional Gemini intent parsing, locally validated/executed tools, local response formatting by default, and verified on-device TTS where supported. Push-to-talk comes first; “Hello Desk” wake-word detection is a later optional feature, and reliable screen-off listening may require a native Android foreground service rather than a browser page. The Gemini API plan, including free-tier privacy, quotas, and offline fallback constraints, is in [docs/gemini-assistant-plan.md](docs/gemini-assistant-plan.md). Voice capture is not implemented yet. Gemini intent parsing is implemented but remains disabled until configured on the server and explicitly consented to for each command.
+
+### Configure the optional Gemini assistant
+
+1. Create an API key in [Google AI Studio](https://aistudio.google.com/apikey). Restrict the key to the Gemini API when the key type/account supports restrictions.
+2. Create a private environment file at `~/.config/deskos/gemini.env` with these entries (replace the placeholder by typing the key directly in your local editor):
+
+```ini
+DESKOS_GEMINI_ENABLED=true
+DESKOS_GEMINI_DATA_POLICY_ACCEPTED=true
+GEMINI_API_KEY=your-key-goes-here
+DESKOS_GEMINI_MODEL=gemini-3.5-flash-lite
+DESKOS_GEMINI_MAX_RPM=10
+```
+
+`DESKOS_GEMINI_DATA_POLICY_ACCEPTED=true` is a separate acknowledgement gate: only set it after reviewing Google's current terms and understanding unpaid-tier prompt handling. Keep this file outside the repository and restrict it to your user (`chmod 700 ~/.config/deskos` and `chmod 600 ~/.config/deskos/gemini.env`). Never paste the key into the dashboard, source code, a command-line argument, or a chat. The repository provides a non-secret template at [docs/gemini.env.example](docs/gemini.env.example); it keeps the data-policy acknowledgement false by default.
+
+3. For systemd, update/reinstall the unit from this checkout with `./install-deskos-service.sh` so it includes the optional `EnvironmentFile`, then restart DeskOS. This changes the DeskOS service and briefly interrupts dashboard/reminder access; do this only when ready. The installer does not create or print the secret file. For manual runs, export the variables in the server process environment before launching `server.py`.
+4. Open the dashboard, check the per-command Gemini consent box, review the command text, then submit. Without the checkbox, requests use the deterministic local assistant. Gemini does not receive audio, reminder lists, or status metric payloads; results are executed and formatted locally. Cancellation still asks for confirmation.
+
+**Free-tier privacy warning:** Google states that unpaid-tier prompts and responses may be used to improve its products and may be reviewed. Test with synthetic/non-sensitive commands only. Do not send real reminder titles, personal transcripts, or private system details through the free tier unless you have reviewed and explicitly accepted the current terms/data handling. DeskOS caps this adapter at 10 requests per minute by default; actual Google project quota may be lower or change.
+
+Local dictation is available only if the page is served from a secure context and the browser explicitly supports on-device `SpeechRecognition.processLocally`. DeskOS does not auto-download speech models and will disable dictation if local processing cannot be guaranteed. The current LAN HTTP deployment is not a secure context on most phones, so microphone access may require a separately configured trusted HTTPS endpoint; typed commands still work. Speech output is offered only through an installed browser voice marked local. Neither local dictation nor voice output has been verified on the Realme C2 yet.
+
 ### Run regression tests
 
 From the project root, run the backend tests with:

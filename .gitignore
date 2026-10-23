@@ -2,5 +2,7 @@
 __pycache__/
 *.py[cod]
 .env
+gemini.env
+**/gemini.env
 .DS_Store
 /static/sounds/my-alert.mp3

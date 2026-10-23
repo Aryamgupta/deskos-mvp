@@ -1,4 +1,4 @@
-"""Deterministic, local-only DeskOS command routing. No model or shell access."""
+"""DeskOS local command routing and strict dispatcher; no model or shell access."""
 
 from __future__ import annotations
 
@@ -89,8 +89,55 @@ class AssistantRouter:
             "I did not recognize that. Try: ‘What time is it?’, ‘How is my laptop doing?’, ‘Show my reminders’, ‘Remind me to stretch in 10 minutes’, or ‘Cancel reminder to stretch’.",
         )
 
+    def execute_proposal(self, proposal: dict[str, Any], confirm: bool = False) -> dict[str, Any]:
+        """Validate a model proposal against the fixed local tool allowlist."""
+        if not isinstance(proposal, dict) or set(proposal) != {"tool", "arguments"}:
+            return self._result(False, "The assistant returned an invalid command. No action was taken.")
+        if not isinstance(confirm, bool):
+            return self._result(False, "Confirmation must be an explicit yes or no.")
+
+        tool = proposal.get("tool")
+        arguments = proposal.get("arguments")
+        if not isinstance(tool, str) or not isinstance(arguments, dict):
+            return self._result(False, "The assistant returned an invalid command. No action was taken.")
+
+        no_argument_tools = {
+            "get_time": self._time,
+            "get_system_status": self._system_status,
+            "get_device_status": self._device_status,
+            "list_reminders": self._list_reminders,
+        }
+        if tool in no_argument_tools:
+            if arguments:
+                return self._result(False, "Unexpected arguments were returned. No action was taken.")
+            return no_argument_tools[tool]()
+
+        if tool == "create_reminder":
+            if set(arguments) != {"title", "amount", "unit"}:
+                return self._result(False, "Reminder details were incomplete or unexpected. No action was taken.")
+            title = arguments.get("title")
+            amount = arguments.get("amount")
+            unit = arguments.get("unit")
+            if not isinstance(title, str) or type(amount) is not int or not isinstance(unit, str):
+                return self._result(False, "Reminder details had invalid types. No action was taken.")
+            if unit not in {"minutes", "hours", "days", "weeks"}:
+                return self._result(False, "The reminder time unit is unsupported. No action was taken.")
+            return self._create_reminder(title, amount, unit)
+
+        if tool == "cancel_reminder":
+            if set(arguments) != {"title"} or not isinstance(arguments.get("title"), str):
+                return self._result(False, "Cancellation details were invalid. No action was taken.")
+            return self._cancel_reminder(arguments["title"], confirm)
+
+        if tool == "unsupported" and not arguments:
+            return self._result(False, "That request is not supported by DeskOS. No action was taken.", tool="unsupported")
+
+        return self._result(False, "The assistant requested an unknown or invalid action. No action was taken.")
+
     @staticmethod
     def _result(ok: bool, message: str, **extra: Any) -> dict[str, Any]:
+        # All deterministic local responses are safe to speak aloud via TTS.
+        extra.setdefault("tts", True)
         return {"ok": ok, "message": message, **extra}
 
     def _time(self) -> dict[str, Any]:
