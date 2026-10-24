@@ -16,6 +16,8 @@ body{background:radial-gradient(1100px 650px at 50% 28%,#0f1a26,#04060a 72%);bac
 .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}.dot.off{background:var(--red);box-shadow:0 0 10px var(--red)}
 .pill,.btn,.fullscreen-btn{background:var(--card);color:var(--soft);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:12px;font-family:inherit;white-space:nowrap}
 .pill:active,.btn:active{transform:scale(.96)}
+.btn.listening{background:rgba(255,125,125,.18)!important;color:var(--red)!important;border-color:rgba(255,125,125,.6)!important;animation:micPulse 1.2s infinite ease-in-out}
+@keyframes micPulse{0%,100%{box-shadow:0 0 5px rgba(255,125,125,.5)}50%{box-shadow:0 0 18px rgba(255,125,125,.85)}}
 #ambientBtn{color:var(--cy);border-color:rgba(95,224,255,.35)}
 .cluster{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:clamp(8px,2vw,24px)}
 .gcol{display:grid;justify-items:center;gap:8px}
@@ -111,7 +113,7 @@ body{background:radial-gradient(1100px 650px at 50% 28%,#0f1a26,#04060a 72%);bac
 <div class="gcol r"><div class="gauge"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="42" pathLength="100"/><circle class="arc" id="ramBar" cx="50" cy="50" r="42" pathLength="100"/></svg><div class="g-in"><div class="g-val" id="ram">—<span class="unit"> %</span></div><div class="g-lbl">Memory</div></div></div><div class="g-note" id="ramNote">RAM usage</div></div>
 </section>
 <div class="offline" id="offline">Laptop unavailable — showing clock only. Metrics are hidden to prevent stale readings.</div>
-<div class="alert-tools"><span class="alert-state" id="alertState">Phone alerts are off until enabled.</span><button class="btn" id="enableAlerts" type="button">Enable phone alerts</button></div><div class="warning-list" id="warnings" aria-live="polite"><div class="warning ok">Monitoring is lightweight. Warnings appear only when thresholds persist.</div></div><aside class="alert-toast" id="alertToast" role="alert" aria-live="assertive"><div class="toast-head"><span id="toastTitle">DeskOS warning</span><button class="toast-close" id="toastClose" type="button">Dismiss</button></div><div class="toast-message" id="toastMessage"></div></aside>
+<div class="alert-tools"><span class="alert-state" id="alertState">Phone alerts are off until enabled.</span><div style="display:flex;gap:8px;align-items:center"><select id="speechLang" class="pill" style="background:#0d1520;color:var(--cy);border-color:rgba(95,224,255,.3);padding:6px 10px;font-size:11px" title="Mic Language"><option value="en-IN">English (India)</option><option value="hi-IN">Hindi (हिंदी / Hinglish)</option><option value="en-US">English (US)</option></select><select id="voiceSelect" class="pill" style="max-width:200px;background:#0d1520;color:var(--cy);border-color:rgba(95,224,255,.3);padding:6px 10px;font-size:11px" title="Choose Voice Style"><option value="auto">Auto (Best Gemini Voice)</option></select><button class="btn" id="enableAlerts" type="button">Enable phone alerts</button></div></div><div class="warning-list" id="warnings" aria-live="polite"><div class="warning ok">Monitoring is lightweight. Warnings appear only when thresholds persist.</div></div><aside class="alert-toast" id="alertToast" role="alert" aria-live="assertive"><div class="toast-head"><span id="toastTitle">DeskOS warning</span><button class="toast-close" id="toastClose" type="button">Dismiss</button></div><div class="toast-message" id="toastMessage"></div></aside>
 <section class="strip" id="monitoring">
 <div class="tile"><div class="k">Storage</div><div class="v big" id="disk">—<span class="unit"> %</span></div><div class="bar"><div class="fill" id="diskBar"></div></div><div class="n" id="diskNote">Root filesystem</div></div>
 <div class="tile"><div class="k">Network</div><div class="v big" id="netRate">—</div><div class="bar"><div class="fill" id="netBar"></div></div><div class="n" id="network">—</div></div>
@@ -123,7 +125,7 @@ body{background:radial-gradient(1100px 650px at 50% 28%,#0f1a26,#04060a 72%);bac
 <section class="bottom"><article class="panel"><div class="k">Developer environment · Node.js &amp; Bun</div><div class="sub" style="margin-top:4px">Detected processes (not yet health checks)</div><div class="runtime-list" id="runtimes"><span class="chip empty">Waiting for system status</span></div></article>
 <article class="panel"><div class="k">Focus session · 25 min</div><div class="focus" style="margin-top:6px"><div><div class="focus-time" id="focusTime">25:00</div><div class="sub" id="focusLabel">Ready when you are</div></div><div style="display:flex;gap:6px"><button class="btn" id="focusBtn">Start</button><button class="btn" id="resetBtn">Reset</button></div></div></article></section>
 <section class="reminders panel" id="reminderPanel"><div class="reminder-head"><div><div class="k">Local reminders</div><div class="sub" id="reminderState" style="margin-top:4px">Saved on this DeskOS host · delivery runs while the service is on</div></div></div><form class="reminder-form" id="reminderForm"><input id="reminderTitle" name="title" maxlength="160" placeholder="What should I remind you?" required><input id="reminderDue" name="due_at" type="datetime-local" required><select id="reminderRecurrence" name="recurrence" aria-label="Repeat"><option value="none">One time</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select><button id="reminderSubmit" type="submit">Add reminder</button><button id="reminderCancelEdit" type="button" hidden>Cancel edit</button></form><div class="reminder-list" id="reminderList" aria-live="polite"><div class="reminder-empty">Loading reminders…</div></div></section>
-<section class="assistant panel" id="assistantPanel"><div class="k">DeskOS Assistant · Natural AI Companion</div><div class="sub" style="margin-top:4px">Powered by Gemini with smart context and local fallback. Ask naturally to set reminders, check system health, or answer questions.</div><form class="assistant-form" id="assistantForm"><input id="assistantCommand" maxlength="1000" autocomplete="off" placeholder="e.g. Set a reminder to call Rishabh at 3pm today" required><button id="assistantSubmit" type="submit">Ask DeskOS</button></form><div class="assistant-examples" aria-label="Example commands"><button class="assistant-example" type="button" data-command="Set a reminder for calling Rishabh at 3pm today">Remind to call Rishabh</button><button class="assistant-example" type="button" data-command="How is my laptop doing?">Laptop status</button><button class="assistant-example" type="button" data-command="What are my reminders for today?">Show reminders</button></div><div class="assistant-output" id="assistantOutput" role="status" aria-live="polite">Ready for your natural language commands.</div></section>
+<section class="assistant panel" id="assistantPanel"><div class="k">DeskOS Assistant · Natural AI Companion</div><div class="sub" style="margin-top:4px">Powered by Gemini with smart context. Speak with the mic or type natural language commands.</div><form class="assistant-form" id="assistantForm" style="grid-template-columns:1fr auto auto"><input id="assistantCommand" maxlength="1000" autocomplete="off" placeholder="e.g. Set a reminder to call Rishabh at 3pm today" required><button id="voiceInputBtn" type="button" class="btn" style="background:#0d1e2e;color:var(--cy);border-color:rgba(95,224,255,.4);display:flex;align-items:center;gap:6px" title="Hold or Click to Speak"><svg id="micIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg><span id="voiceBtnText">Voice</span></button><button id="assistantSubmit" type="submit">Ask DeskOS</button></form><div class="assistant-examples" aria-label="Example commands"><button class="assistant-example" type="button" data-command="Set a reminder for calling Rishabh at 3pm today">Remind to call Rishabh</button><button class="assistant-example" type="button" data-command="How is my laptop doing?">Laptop status</button><button class="assistant-example" type="button" data-command="What are my reminders for today?">Show reminders</button></div><div class="assistant-output" id="assistantOutput" role="status" aria-live="polite">Ready for your voice or typed commands.</div></section>
 <dialog class="reminder-dialog" id="reminderDialog"><h2>DeskOS reminder</h2><p id="reminderDialogText"></p><button id="ackReminder" type="button">Acknowledge</button></dialog>
 <footer class="footer"><span id="hostSub">DeskOS will connect over your local network.</span><span id="updated">Waiting for first update</span></footer>
 </main>
@@ -249,6 +251,85 @@ function showAlert(message,critical=false,title=null,theme=null){
 }
 function closeAlert(){ $('alertToast').classList.remove('show');if(toastTimer)clearTimeout(toastTimer);toastTimer=null; }
 
+let ttsEnabled = true;
+
+let availableVoices = [];
+
+function populateVoiceList() {
+  if (!('speechSynthesis' in window)) return;
+  // Include both English and Hindi voices for authentic native pronunciation
+  availableVoices = window.speechSynthesis.getVoices().filter(v => 
+    v.lang.startsWith('en') || v.lang.startsWith('hi')
+  );
+  const select = $('voiceSelect');
+  if (!select || availableVoices.length === 0) return;
+
+  const currentVal = select.value;
+  select.innerHTML = '<option value="auto">Auto (Native Detect: Hindi / Indian English)</option>';
+  availableVoices.forEach((v, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx);
+    opt.textContent = `${v.name} (${v.lang})`;
+    select.appendChild(opt);
+  });
+  if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+    select.value = currentVal;
+  }
+}
+
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = populateVoiceList;
+  populateVoiceList();
+}
+
+function containsHindi(text) {
+  // Check for Devanagari script characters (U+0900 to U+097F)
+  if (/[\u0900-\u097F]/.test(text)) return true;
+  // Check for common Hindi/Hinglish vocabulary tokens
+  const hindiKeywords = /\b(aur|hai|hain|ka|ki|ke|ko|se|me|mein|par|karo|karna|kar|raha|rahi|ho|aap|tum|mujhe|hum|aaj|kal|baje|shaam|subah|yaad|dilana|kaisa|chal)\b/i;
+  return hindiKeywords.test(text);
+}
+
+function speakText(text) {
+  if (!ttsEnabled || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel(); // Stop any pending speech
+    const cleanText = text.replace(/[•\n\r*`_#]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleanText) return;
+
+    const isHindi = containsHindi(cleanText);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.lang = isHindi ? 'hi-IN' : 'en-IN';
+
+    const selectedIdx = $('voiceSelect') ? $('voiceSelect').value : 'auto';
+    if (selectedIdx !== 'auto' && availableVoices[Number(selectedIdx)]) {
+      utterance.voice = availableVoices[Number(selectedIdx)];
+    } else {
+      const voices = window.speechSynthesis.getVoices();
+      let preferred = null;
+      if (isHindi) {
+        // Find native Hindi voice first (Google हिन्दी, hi-IN)
+        preferred = voices.find(v => v.lang === 'hi-IN' || v.lang.startsWith('hi') || v.name.includes('Hindi') || v.name.includes('हिन्दी'))
+                 || voices.find(v => v.lang === 'en-IN' || v.name.includes('India'));
+      } else {
+        // Find native Indian English voice so Hindi loanwords/names sound authentic, not NRI
+        preferred = voices.find(v => v.lang === 'en-IN' || v.name.includes('India'))
+                 || voices.find(v => v.name.includes('Google US English'))
+                 || voices.find(v => v.lang.startsWith('en') && !v.name.includes('eSpeak'));
+      }
+      if (preferred) {
+        utterance.voice = preferred;
+      }
+    }
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn('Speech synthesis error:', err);
+  }
+}
+
 const alertSound = new Audio('/sounds/my-alert.mp3');
 alertSound.preload = 'auto';
 alertSound.volume = 1.0;
@@ -303,6 +384,7 @@ async function playBeep(critical = false) {
 }
 $('enableAlerts').addEventListener('click',async()=>{
   alertsEnabled=true;
+  ttsEnabled=true;
   try{
     const Ctx=window.AudioContext||window.webkitAudioContext;
     if(Ctx){
@@ -312,8 +394,9 @@ $('enableAlerts').addEventListener('click',async()=>{
   }catch(e){}
   if('vibrate' in navigator) navigator.vibrate([100,60,100]);
   playTaskChime();
-  $('alertState').textContent='Phone alerts enabled · vibration + sound when supported';
-  $('enableAlerts').textContent='Test task chime';
+  speakText("DeskOS voice output is enabled and ready.");
+  $('alertState').textContent='Voice & alerts enabled · speaking answers aloud';
+  $('enableAlerts').textContent='Test voice output';
 });
 $('enableAlerts').addEventListener('dblclick',()=>{if(alertsEnabled){if('vibrate' in navigator)navigator.vibrate([100,60,100]);playBeep(true);}});
 $('toastClose').addEventListener('click',closeAlert);
@@ -326,7 +409,25 @@ const reminderDate=new Date(Date.now()-new Date().getTimezoneOffset()*60000);$('
 async function reminderRequest(url,options={}){const response=await fetch(url,{cache:'no-store',...options});let data={};try{data=await response.json()}catch(e){}if(!response.ok)throw Object.assign(new Error(data.error||`Request failed (${response.status})`),{status:response.status});return data;}
 function renderReminders(reminders){activeReminders=reminders;const list=$('reminderList');if(!reminders.length){list.innerHTML='<div class="reminder-empty">No active reminders. They remain stored locally across service restarts.</div>';return;}list.innerHTML=reminders.map(item=>{const due=new Date(item.due_at);const repeat=item.recurrence==='none'?'One time':item.recurrence==='daily'?'Repeats daily':`Repeats weekly · ${esc(item.timezone)}`;return `<div class="reminder-row"><div><div class="reminder-title">${esc(item.title)}</div><div class="reminder-meta">${esc(due.toLocaleString())} · ${repeat}</div></div><div class="reminder-actions"><button class="reminder-action" data-reminder-action="edit" data-reminder-id="${esc(item.id)}">Edit</button><button class="reminder-action" data-reminder-action="complete" data-reminder-id="${esc(item.id)}">Complete</button><button class="reminder-action delete" data-reminder-action="delete" data-reminder-id="${esc(item.id)}">Cancel</button></div></div>`;}).join('');}
 async function refreshReminders(){if(reminderRequestRunning)return;reminderRequestRunning=true;try{const data=await reminderRequest('/api/reminders');renderReminders(data.reminders||[]);$('reminderState').textContent='Saved on this DeskOS host · due reminders wait for acknowledgement';}catch(error){$('reminderState').textContent='Reminder service unavailable · saved data is unchanged';}finally{reminderRequestRunning=false;}}
-async function refreshReminderNotifications(){if(notificationRequestRunning)return;notificationRequestRunning=true;try{const data=await reminderRequest('/api/notifications');const pending=data.notifications||[];if(pending.length&&!$('reminderDialog').open){const notice=pending[0];pendingReminderId=notice.id;$('reminderDialogText').textContent=`${notice.title} · scheduled ${new Date(notice.occurrence_at).toLocaleString()}`;$('reminderDialog').showModal();if(alertsEnabled){try{if('vibrate' in navigator)navigator.vibrate([300,100,300]);}catch(e){}playBeep(false);}}}catch(e){}finally{notificationRequestRunning=false;}}
+async function refreshReminderNotifications(){
+  if(notificationRequestRunning)return;
+  notificationRequestRunning=true;
+  try{
+    const data=await reminderRequest('/api/notifications');
+    const pending=data.notifications||[];
+    if(pending.length&&!$('reminderDialog').open){
+      const notice=pending[0];
+      pendingReminderId=notice.id;
+      $('reminderDialogText').textContent=`${notice.title} · scheduled ${new Date(notice.occurrence_at).toLocaleString()}`;
+      $('reminderDialog').showModal();
+      if(alertsEnabled){
+        try{if('vibrate' in navigator)navigator.vibrate([300,100,300]);}catch(e){}
+        playTaskChime();
+        speakText(`Reminder: ${notice.title}`);
+      }
+    }
+  }catch(e){}finally{notificationRequestRunning=false;}
+}
 $('reminderForm').addEventListener('submit',async event=>{event.preventDefault();const title=$('reminderTitle').value.trim(),localDue=$('reminderDue').value;if(!title||!localDue)return;const due=new Date(localDue);if(Number.isNaN(due.getTime())||due.getTime()<=Date.now()){ $('reminderState').textContent='Choose a future date and time.';return;}const editing=Boolean(editingReminderId);const url=editing?`/api/reminders/${encodeURIComponent(editingReminderId)}`:'/api/reminders';try{await reminderRequest(url,{method:editing?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due_at:due.toISOString(),recurrence:$('reminderRecurrence').value,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'})});editingReminderId=null;$('reminderTitle').value='';$('reminderDue').value='';$('reminderRecurrence').value='none';$('reminderSubmit').textContent='Add reminder';$('reminderCancelEdit').hidden=true;$('reminderState').textContent=editing?'Reminder updated.':'Reminder saved.';await refreshReminders();}catch(error){$('reminderState').textContent=error.message;}});
 $('reminderCancelEdit').addEventListener('click',()=>{editingReminderId=null;$('reminderForm').reset();$('reminderSubmit').textContent='Add reminder';$('reminderCancelEdit').hidden=true;$('reminderState').textContent='Edit cancelled.';});
 $('reminderList').addEventListener('click',async event=>{const button=event.target.closest('[data-reminder-action]');if(!button)return;const id=button.dataset.reminderId,action=button.dataset.reminderAction;if(action==='edit'){const item=activeReminders.find(reminder=>reminder.id===id);if(!item)return;editingReminderId=id;$('reminderTitle').value=item.title;const due=new Date(item.due_at);$('reminderDue').value=new Date(due.getTime()-due.getTimezoneOffset()*60000).toISOString().slice(0,16);$('reminderRecurrence').value=item.recurrence;$('reminderSubmit').textContent='Save changes';$('reminderCancelEdit').hidden=false;$('reminderTitle').focus();return;}button.disabled=true;try{await reminderRequest(action==='complete'?`/api/reminders/${encodeURIComponent(id)}/complete`:`/api/reminders/${encodeURIComponent(id)}`,{method:action==='complete'?'POST':'DELETE'});if(editingReminderId===id){editingReminderId=null;$('reminderForm').reset();$('reminderSubmit').textContent='Add reminder';$('reminderCancelEdit').hidden=true;}await refreshReminders();}catch(error){$('reminderState').textContent=error.message;button.disabled=false;}});
@@ -385,6 +486,9 @@ function setupEventSource() {
       // Pop up a dedicated notification card for the assistant result
       showAlert(msg, false, 'DeskOS Assistant Result', 'assistant');
 
+      // Speak result aloud through phone/laptop speaker
+      speakText(msg);
+
       // Sync reminder list if a reminder was created or cancelled
       if (res.ok && ['create_reminder', 'cancel_reminder'].includes(res.tool)) {
         await refreshReminders();
@@ -421,6 +525,95 @@ $('assistantForm').addEventListener('submit', async event => {
     $('assistantOutput').textContent = `Error: ${error.message}`;
   }
 });
+// Speech-to-Text (STT) Push-to-Talk Implementation with Debounced Silence Detection
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognizer = null;
+let isListening = false;
+let silenceTimer = null;
+let currentTranscript = '';
+
+if (SpeechRec) {
+  recognizer = new SpeechRec();
+  // Continuous listening so it does not prematurely cut off while pausing between words
+  recognizer.continuous = true;
+  recognizer.interimResults = true;
+  recognizer.lang = 'en-IN'; // Default to Indian English / Hinglish-friendly model
+
+  recognizer.onstart = () => {
+    isListening = true;
+    currentTranscript = '';
+    $('voiceInputBtn').classList.add('listening');
+    $('voiceBtnText').textContent = 'Listening…';
+    $('assistantOutput').textContent = '🎙️ Listening… Speak at your own pace';
+  };
+
+  recognizer.onresult = event => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const trans = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        currentTranscript += ' ' + trans;
+      } else {
+        interim += trans;
+      }
+    }
+    const fullText = (currentTranscript + ' ' + interim).trim();
+    $('assistantCommand').value = fullText;
+    $('assistantOutput').textContent = `🎙️ "${fullText}"`;
+
+    // Increased pause tolerance: wait 2.2 seconds of silence before finalizing and submitting
+    if (silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      if (isListening) {
+        recognizer.stop();
+      }
+    }, 2200);
+  };
+
+  recognizer.onerror = event => {
+    if (event.error !== 'no-speech') {
+      console.warn('Speech recognition error:', event.error);
+      $('assistantOutput').textContent = `Mic note: ${event.error}`;
+    }
+  };
+
+  recognizer.onend = () => {
+    isListening = false;
+    if (silenceTimer) clearTimeout(silenceTimer);
+    $('voiceInputBtn').classList.remove('listening');
+    $('voiceBtnText').textContent = 'Voice';
+
+    const spoken = $('assistantCommand').value.trim();
+    if (spoken) {
+      // Auto-submit the full command directly into the async queue
+      $('assistantForm').dispatchEvent(new Event('submit', {cancelable: true}));
+    }
+  };
+}
+
+$('speechLang').addEventListener('change', () => {
+  if (recognizer) {
+    recognizer.lang = $('speechLang').value;
+  }
+});
+
+$('voiceInputBtn').addEventListener('click', () => {
+  if (!recognizer) {
+    alert('Voice input is not supported in this browser. Please use Chrome, Edge, or a WebKit browser.');
+    return;
+  }
+  if (isListening) {
+    recognizer.stop();
+  } else {
+    try {
+      recognizer.lang = $('speechLang').value || 'en-IN';
+      recognizer.start();
+    } catch (e) {
+      console.warn('Cannot start recognition:', e);
+    }
+  }
+});
+
 document.querySelectorAll('[data-command]').forEach(button=>button.addEventListener('click',()=>{$('assistantCommand').value=button.dataset.command;$('assistantCommand').focus();}));
 let wakeLock=null;
 async function requestDisplayWakeLock(){try{if('wakeLock' in navigator && document.visibilityState==='visible')wakeLock=await navigator.wakeLock.request('screen');}catch(e){/* Requires a supported secure context; Android Stay awake remains the fallback. */}}

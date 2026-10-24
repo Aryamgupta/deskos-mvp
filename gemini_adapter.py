@@ -57,6 +57,7 @@ You must reply with a valid JSON object matching this schema:
 }
 
 Important Instructions:
+- Multilingual Support: Understand user commands in English, Hindi, Hinglish, and mixed regional languages (e.g. "Rishabh ko call karne ka reminder lagao shaam 5 baje", "Mujhe kal subah 9 baje stretch karne ke liye yaad dilana", "laptop kaisa chal raha hai"). Always map them accurately to the appropriate action and reply naturally in the language or Hinglish the user used!
 - Always compute the absolute `due_at` timestamp in UTC based on the current workstation datetime and timezone provided.
 - If the user asks general questions or asks about system metrics, choose action "system_status" or "reply" with a helpful, conversational explanation in "reply".
 - Always output raw valid JSON only. No markdown formatting, backticks, or extra prose outside the JSON.

@@ -123,14 +123,6 @@ class AssistantRouter:
                 return self._result(False, f"Multiple reminders match '{target_title}'. Please be more specific.")
 
             target = matching[0]
-            if not confirm:
-                return self._result(
-                    True,
-                    f"Are you sure you want to cancel the reminder: '{target['title']}'?",
-                    confirmation_required=True,
-                    data={"target_id": target["id"]},
-                )
-
             self.reminder_store.cancel(target["id"])
             return self._result(True, reply or f"Cancelled reminder: '{target['title']}'.", tool="cancel_reminder")
 
