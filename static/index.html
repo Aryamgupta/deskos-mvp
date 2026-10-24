@@ -88,7 +88,9 @@ body{background:radial-gradient(1100px 650px at 50% 28%,#0f1a26,#04060a 72%);bac
 #focusBtn{background:var(--cy);color:#03141a;border-color:transparent;font-weight:600}
 .footer{display:flex;justify-content:space-between;gap:12px;color:#4f5b6b;font-size:11px;padding:14px 4px 2px}
 .alert-toast{display:none;position:fixed;z-index:99;left:50%;bottom:18px;transform:translateX(-50%);width:min(92vw,520px);padding:14px 16px;border:1px solid rgba(255,180,77,.4);border-radius:18px;background:#1c1810;color:var(--amber);box-shadow:0 12px 40px #000a}
-.alert-toast.critical{border-color:rgba(255,125,125,.45);background:#1e1112;color:var(--red)}.alert-toast.show{display:block}
+.alert-toast.critical{border-color:rgba(255,125,125,.45);background:#1e1112;color:var(--red)}
+.alert-toast.assistant-result{border-color:rgba(95,224,255,.5);background:#091522;color:var(--cy);box-shadow:0 14px 50px rgba(0,0,0,.7),0 0 25px rgba(95,224,255,.15)}
+.alert-toast.show{display:block}
 .toast-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:650;font-size:13px}.toast-message{font-size:13px;line-height:1.45;margin-top:8px}
 .toast-close{background:transparent;color:inherit;border:1px solid currentColor;border-radius:999px;padding:4px 10px;font-size:11px}
 .ambient .gcol,.ambient .strip,.ambient .bottom,.ambient .reminders,.ambient .assistant,.ambient .footer,.ambient .alert-tools,.ambient .warning-list{display:none}
@@ -181,25 +183,68 @@ function setOnline(on){
     ['cpuBar','ramBar'].forEach(i=>$(i).style.strokeDasharray='0 100');$('netRate').textContent='—';$('runtimes').innerHTML='<span class="chip empty">Laptop offline</span>';
   }
 }
-async function update(){let timeoutId;const controller=new AbortController();try{timeoutId=setTimeout(()=>controller.abort(),2500);const r=await fetch('/api/status',{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error('status');const s=await r.json();lastSeen=Date.now();setOnline(true);$('hostname').textContent=s.hostname||'Ubuntu workstation';$('hostSub').textContent='Local service active · refresh every 5 seconds';$('uptime').textContent=duration(s.uptime_seconds);$('battery').textContent=s.battery?`${s.battery.percent}% · ${s.battery.plugged?'Charging / plugged':'On battery'}`:'Not reported';$('network').textContent=`↓ ${bytes(s.network.down_bytes_sec)} · ↑ ${bytes(s.network.up_bytes_sec)}`;const da=s.disk&&s.disk.activity;$('diskActivity').textContent=da?`↓ ${bytes(da.read_bytes_sec)} · ↑ ${bytes(da.write_bytes_sec)}`:'Not reported';const cpuTemperature=s.cpu_temperature;$('temp').textContent=cpuTemperature?`${cpuTemperature.celsius} °C · ${cpuTemperature.sensor}`:'CPU temperature unavailable';showWarnings(s);metric(s.cpu_percent,'cpu','cpuBar');metric(s.memory.percent,'ram','ramBar');metric(s.disk.percent,'disk','diskBar');$('ramNote').textContent=`${(s.memory.used/1073741824).toFixed(1)} / ${(s.memory.total/1073741824).toFixed(1)} GB used`;$('diskNote').textContent=`${(s.disk.free/1073741824).toFixed(1)} GB free on root filesystem`;const rate=s.network.down_bytes_sec+s.network.up_bytes_sec;$('netRate').textContent=bytes(rate).replace('/s','');$('netBar').style.width=Math.min(100,rate/1048576*100)+'%';const procs=s.runtimes||[];$('runtimes').innerHTML=procs.length?procs.map(p=>`<span class="chip">${esc(p.runtime)} · PID ${p.pid}</span>`).join(''):'<span class="chip empty">No Node.js/Bun processes detected</span>';$('updated').textContent='Updated '+new Date(s.timestamp*1000).toLocaleTimeString();}catch(e){if(!lastSeen||Date.now()-lastSeen>6500)setOnline(false);}finally{if(timeoutId)clearTimeout(timeoutId);}}
+function renderStatus(s) {
+  lastSeen = Date.now();
+  setOnline(true);
+  $('hostname').textContent = s.hostname || 'Ubuntu workstation';
+  $('hostSub').textContent = 'Live SSE stream connected · zero polling';
+  $('uptime').textContent = duration(s.uptime_seconds);
+  $('battery').textContent = s.battery ? `${s.battery.percent}% · ${s.battery.plugged ? 'Charging / plugged' : 'On battery'}` : 'Not reported';
+  $('network').textContent = `↓ ${bytes(s.network.down_bytes_sec)} · ↑ ${bytes(s.network.up_bytes_sec)}`;
+  const da = s.disk && s.disk.activity;
+  $('diskActivity').textContent = da ? `↓ ${bytes(da.read_bytes_sec)} · ↑ ${bytes(da.write_bytes_sec)}` : 'Not reported';
+  const cpuTemperature = s.cpu_temperature;
+  $('temp').textContent = cpuTemperature ? `${cpuTemperature.celsius} °C · ${cpuTemperature.sensor}` : 'CPU temperature unavailable';
+  showWarnings(s);
+  metric(s.cpu_percent, 'cpu', 'cpuBar');
+  metric(s.memory.percent, 'ram', 'ramBar');
+  metric(s.disk.percent, 'disk', 'diskBar');
+  $('ramNote').textContent = `${(s.memory.used / 1073741824).toFixed(1)} / ${(s.memory.total / 1073741824).toFixed(1)} GB used`;
+  $('diskNote').textContent = `${(s.disk.free / 1073741824).toFixed(1)} GB free on root filesystem`;
+  const rate = s.network.down_bytes_sec + s.network.up_bytes_sec;
+  $('netRate').textContent = bytes(rate).replace('/s', '');
+  $('netBar').style.width = Math.min(100, rate / 1048576 * 100) + '%';
+  const procs = s.runtimes || [];
+  $('runtimes').innerHTML = procs.length ? procs.map(p => `<span class="chip">${esc(p.runtime)} · PID ${p.pid}</span>`).join('') : '<span class="chip empty">No Node.js/Bun processes detected</span>';
+  $('updated').textContent = 'Updated ' + new Date(s.timestamp * 1000).toLocaleTimeString();
+}
 
-function showAlert(message,critical=false){
+async function update(){
+  // Initial fallback fetch on page load if stream is connecting
+  if (lastSeen && Date.now() - lastSeen < 6000) return;
+  try {
+    const r = await fetch('/api/status', {cache: 'no-store'});
+    if (r.ok) renderStatus(await r.json());
+  } catch(e) {
+    if (!lastSeen || Date.now() - lastSeen > 6500) setOnline(false);
+  }
+}
+
+function showAlert(message,critical=false,title=null,theme=null){
   if($('alertToast').classList.contains('show')&&$('alertToast').classList.contains('critical')&&!critical)return;
-  $('toastTitle').textContent=critical?'Critical workstation warning':'Workstation warning';
+  $('toastTitle').textContent=title || (critical?'Critical workstation warning':'DeskOS notification');
   $('toastMessage').textContent=message;
-  $('alertToast').classList.toggle('critical',critical);
+  $('alertToast').classList.remove('critical','assistant-result');
+  if(critical) $('alertToast').classList.add('critical');
+  if(theme==='assistant') $('alertToast').classList.add('assistant-result');
   $('alertToast').classList.add('show');
   if(toastTimer)clearTimeout(toastTimer);
   if(!critical)toastTimer=setTimeout(closeAlert,10000);
   if(alertsEnabled){
-    try{if ('vibrate' in navigator) {
-  navigator.vibrate(
-    critical
-      ? [500, 150, 500, 150, 700, 150, 500]
-      : [400, 120, 400, 120, 400]
-  );
-}}catch(e){}
-    playBeep(critical);
+    try{
+      if ('vibrate' in navigator) {
+        navigator.vibrate(
+          critical
+            ? [500, 150, 500, 150, 700, 150, 500]
+            : [400, 120, 400, 120, 400]
+        );
+      }
+    }catch(e){}
+    if(theme==='assistant'){
+      playTaskChime();
+    } else {
+      playBeep(critical);
+    }
   }
 }
 function closeAlert(){ $('alertToast').classList.remove('show');if(toastTimer)clearTimeout(toastTimer);toastTimer=null; }
@@ -207,6 +252,45 @@ function closeAlert(){ $('alertToast').classList.remove('show');if(toastTimer)cl
 const alertSound = new Audio('/sounds/my-alert.mp3');
 alertSound.preload = 'auto';
 alertSound.volume = 1.0;
+
+function playTaskChime() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!audioContext) audioContext = new Ctx();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+
+    const t = audioContext.currentTime;
+    
+    // Play an energetic 3-tone chime: G5 -> C6 -> E6
+    const notes = [
+      { f: 783.99, start: 0.00, dur: 0.12 },
+      { f: 1046.50, start: 0.10, dur: 0.14 },
+      { f: 1318.51, start: 0.22, dur: 0.35 }
+    ];
+
+    notes.forEach(n => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(n.f, t + n.start);
+
+      gain.gain.setValueAtTime(0.001, t + n.start);
+      gain.gain.linearRampToValueAtTime(0.35, t + n.start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + n.start + n.dur);
+
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+
+      osc.start(t + n.start);
+      osc.stop(t + n.start + n.dur);
+    });
+  } catch (err) {
+    console.warn('Task chime error:', err);
+  }
+}
 
 async function playBeep(critical = false) {
   try {
@@ -217,7 +301,20 @@ async function playBeep(critical = false) {
     console.warn('DeskOS alert sound could not play:', error);
   }
 }
-$('enableAlerts').addEventListener('click',async()=>{alertsEnabled=true;try{const Ctx=window.AudioContext||window.webkitAudioContext;if(Ctx){if(!audioContext)audioContext=new Ctx();if(audioContext.state==='suspended')await audioContext.resume();}}catch(e){}if('vibrate' in navigator)navigator.vibrate([100,60,100]);playBeep(false);$('alertState').textContent='Phone alerts enabled · vibration + sound when supported';$('enableAlerts').textContent='Test alerts';});
+$('enableAlerts').addEventListener('click',async()=>{
+  alertsEnabled=true;
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(Ctx){
+      if(!audioContext) audioContext=new Ctx();
+      if(audioContext.state==='suspended') await audioContext.resume();
+    }
+  }catch(e){}
+  if('vibrate' in navigator) navigator.vibrate([100,60,100]);
+  playTaskChime();
+  $('alertState').textContent='Phone alerts enabled · vibration + sound when supported';
+  $('enableAlerts').textContent='Test task chime';
+});
 $('enableAlerts').addEventListener('dblclick',()=>{if(alertsEnabled){if('vibrate' in navigator)navigator.vibrate([100,60,100]);playBeep(true);}});
 $('toastClose').addEventListener('click',closeAlert);
 
@@ -236,35 +333,92 @@ $('reminderList').addEventListener('click',async event=>{const button=event.targ
 $('ackReminder').addEventListener('click',async()=>{if(!pendingReminderId){$('reminderDialog').close();return;}const id=pendingReminderId;$('ackReminder').disabled=true;try{await reminderRequest(`/api/notifications/${encodeURIComponent(id)}/ack`,{method:'POST'});pendingReminderId=null;$('reminderDialog').close();await refreshReminderNotifications();await refreshReminders();}catch(error){if(error.status===404){pendingReminderId=null;$('reminderDialog').close();}else{$('reminderDialogText').textContent=`Could not acknowledge yet: ${error.message}`;}}finally{$('ackReminder').disabled=false;}});
 $('reminderDialog').addEventListener('cancel',event=>event.preventDefault());
 refreshReminders();refreshReminderNotifications();setInterval(refreshReminders,15000);setInterval(refreshReminderNotifications,5000);
-$('assistantForm').addEventListener('submit',async event=>{
+// Connect Server-Sent Events (SSE) for instant, real-time push notifications
+let eventSource = null;
+function setupEventSource() {
+  if (eventSource) {
+    eventSource.close();
+  }
+  eventSource = new EventSource('/api/events');
+  eventSource.addEventListener('status', e => {
+    try {
+      const data = JSON.parse(e.data);
+      renderStatus(data);
+    } catch (err) {}
+  });
+  eventSource.addEventListener('task_queued', e => {
+    try {
+      const data = JSON.parse(e.data);
+      $('assistantOutput').textContent = `⏳ Queued (${data.queue_size} in line): "${data.command}"`;
+    } catch (err) {}
+  });
+  eventSource.addEventListener('task_status', e => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.status === 'processing') {
+        $('assistantOutput').textContent = `⚙️ Processing: "${data.command}"…`;
+      }
+    } catch (err) {}
+  });
+  eventSource.addEventListener('task_completed', async e => {
+    try {
+      const data = JSON.parse(e.data);
+      const res = data.result || {};
+      const status = data.status;
+
+      if (status === 'needs_confirmation') {
+        $('assistantOutput').textContent = res.message;
+        if (window.confirm(res.message)) {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+          await reminderRequest('/api/assistant/enqueue', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({command: data.command, confirm: true, timezone: tz})
+          });
+        }
+        return;
+      }
+
+      const msg = res.message || 'Task completed.';
+      $('assistantOutput').textContent = msg;
+
+      // Pop up a dedicated notification card for the assistant result
+      showAlert(msg, false, 'DeskOS Assistant Result', 'assistant');
+
+      // Sync reminder list if a reminder was created or cancelled
+      if (res.ok && ['create_reminder', 'cancel_reminder'].includes(res.tool)) {
+        await refreshReminders();
+      }
+    } catch (err) {
+      console.warn('SSE task event parse error:', err);
+    }
+  });
+  eventSource.onerror = () => {
+    // EventSource automatically retries connection
+  };
+}
+setupEventSource();
+
+$('assistantForm').addEventListener('submit', async event => {
   event.preventDefault();
-  const command=$('assistantCommand').value.trim();
-  if(!command)return;
-  $('assistantSubmit').disabled=true;
-  $('assistantOutput').textContent='Thinking with DeskOS…';
-  const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
-  try{
-    let result=await reminderRequest('/api/assistant/command',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({command,timezone:tz})
+  const command = $('assistantCommand').value.trim();
+  if (!command) return;
+
+  // Immediately clear input for instant snappy feel
+  $('assistantCommand').value = '';
+  $('assistantOutput').textContent = `⏳ Enqueued: "${command}"…`;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+  try {
+    const res = await reminderRequest('/api/assistant/enqueue', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({command, timezone: tz})
     });
-    if(result.confirmation_required&&window.confirm(result.message)){
-      result=await reminderRequest('/api/assistant/command',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({command,confirm:true,timezone:tz})
-      });
-    }
-    $('assistantOutput').textContent=result.message||'DeskOS could not complete that command.';
-    if(result.ok&&['create_reminder','cancel_reminder'].includes(result.tool)){
-      await refreshReminders();
-    }
-    $('assistantCommand').value='';
-  }catch(error){
-    $('assistantOutput').textContent=error.message;
-  }finally{
-    $('assistantSubmit').disabled=false;
+    // Brief toast confirmation that the task was accepted
+    showAlert(`Command queued: "${command}"`, false);
+  } catch (error) {
+    $('assistantOutput').textContent = `Error: ${error.message}`;
   }
 });
 document.querySelectorAll('[data-command]').forEach(button=>button.addEventListener('click',()=>{$('assistantCommand').value=button.dataset.command;$('assistantCommand').focus();}));
@@ -273,6 +427,6 @@ async function requestDisplayWakeLock(){try{if('wakeLock' in navigator && docume
 $('fullscreenBtn').addEventListener('click',async()=>{try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen();$('fullscreenBtn').textContent='Exit fullscreen';}else{await document.exitFullscreen();$('fullscreenBtn').textContent='Fullscreen';}}catch(e){$('fullscreenBtn').textContent='Use kiosk mode';}});
 document.addEventListener('fullscreenchange',()=>{$('fullscreenBtn').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen';});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')requestDisplayWakeLock();});
-requestDisplayWakeLock();clockTick();setInterval(clockTick,250);update();setInterval(update,5000);renderFocus();
+requestDisplayWakeLock();clockTick();setInterval(clockTick,250);update();renderFocus();
 $('clockPanel').addEventListener('click',()=>$('ambientBtn').click());
 </script></body></html>

@@ -2,8 +2,10 @@
 """DeskOS local workstation dashboard and reminder service for Ubuntu."""
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
+from queue import Queue, Empty
 from threading import Event, Lock, Thread
 from urllib.parse import unquote, urlsplit
+from uuid import uuid4
 import json, os, socket, time
 import psutil
 import sqlite3
@@ -19,6 +21,102 @@ CACHE_LOCK = Lock()
 _PROCESS_CACHE = {"at": 0.0, "items": []}
 _TEMP_CACHE = {"at": 0.0, "items": []}
 _GEMINI_ADAPTER = GeminiAdapter.from_environment()
+
+
+class EventBroadcaster:
+    """Thread-safe event broadcaster for Server-Sent Events (SSE)."""
+
+    def __init__(self):
+        self._lock = Lock()
+        self._subscribers: set[Queue] = set()
+
+    def subscribe(self) -> Queue:
+        q: Queue = Queue(maxsize=100)
+        with self._lock:
+            self._subscribers.add(q)
+        return q
+
+    def unsubscribe(self, q: Queue):
+        with self._lock:
+            self._subscribers.discard(q)
+
+    def broadcast(self, event_type: str, data: dict):
+        payload = f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n".encode("utf-8")
+        with self._lock:
+            dead = set()
+            for q in self._subscribers:
+                try:
+                    q.put_nowait(payload)
+                except Exception:
+                    dead.add(q)
+            self._subscribers.difference_update(dead)
+
+
+_BROADCASTER = EventBroadcaster()
+_ASSISTANT_QUEUE: Queue = Queue()
+_TASK_HISTORY: dict[str, dict] = {}
+_TASK_HISTORY_LOCK = Lock()
+
+
+class AssistantWorker(Thread):
+    """Background worker processing queued natural language assistant tasks."""
+
+    def __init__(self, reminder_store_fn):
+        super().__init__(name="DeskOSAssistantWorker", daemon=True)
+        self.reminder_store_fn = reminder_store_fn
+        self.stopping = Event()
+
+    def run(self):
+        while not self.stopping.is_set():
+            try:
+                task = _ASSISTANT_QUEUE.get(timeout=1)
+            except Empty:
+                continue
+
+            task_id = task["id"]
+            command = task["command"]
+            confirm = task.get("confirm", False)
+            timezone_name = task.get("timezone")
+
+            with _TASK_HISTORY_LOCK:
+                if task_id in _TASK_HISTORY:
+                    _TASK_HISTORY[task_id]["status"] = "processing"
+                    _TASK_HISTORY[task_id]["started_at"] = time.time()
+
+            _BROADCASTER.broadcast("task_status", {
+                "task_id": task_id,
+                "status": "processing",
+                "command": command,
+            })
+
+            global _GEMINI_ADAPTER
+            if _GEMINI_ADAPTER is None:
+                _GEMINI_ADAPTER = GeminiAdapter.from_environment()
+
+            store = self.reminder_store_fn()
+            router = AssistantRouter(store, collect_status, gemini_adapter=_GEMINI_ADAPTER)
+
+            try:
+                result = router.handle(command, confirm=confirm, timezone_name=timezone_name)
+                status = "needs_confirmation" if result.get("confirmation_required") else ("completed" if result.get("ok") else "failed")
+            except Exception as exc:
+                result = {"ok": False, "message": f"Processing error: {str(exc)[:120]}"}
+                status = "failed"
+
+            with _TASK_HISTORY_LOCK:
+                if task_id in _TASK_HISTORY:
+                    _TASK_HISTORY[task_id]["status"] = status
+                    _TASK_HISTORY[task_id]["result"] = result
+                    _TASK_HISTORY[task_id]["completed_at"] = time.time()
+
+            _BROADCASTER.broadcast("task_completed", {
+                "task_id": task_id,
+                "status": status,
+                "command": command,
+                "result": result,
+            })
+            _ASSISTANT_QUEUE.task_done()
+
 
 # Prime psutil's CPU and network counters for meaningful subsequent readings.
 psutil.cpu_percent(interval=None)
@@ -156,6 +254,33 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/health":
             self.send_json(200, {"ok": True, "service": "DeskOS"})
+        elif path == "/api/events":
+            # Server-Sent Events stream
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+
+            q = _BROADCASTER.subscribe()
+            try:
+                # Send initial ping event so client knows stream is established
+                self.wfile.write(b": connected\n\n")
+                self.wfile.flush()
+                while True:
+                    try:
+                        msg = q.get(timeout=20)
+                        self.wfile.write(msg)
+                        self.wfile.flush()
+                    except Empty:
+                        # Heartbeat comment to keep connection alive
+                        self.wfile.write(b": heartbeat\n\n")
+                        self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            finally:
+                _BROADCASTER.unsubscribe(q)
         elif path == "/api/status":
             try:
                 # Serialize collection to avoid overlapping sensor/process scans if two displays connect.
@@ -163,6 +288,50 @@ class Handler(SimpleHTTPRequestHandler):
                     self.send_json(200, collect_status())
             except Exception as exc:
                 self.send_json(500, {"error": "Could not collect system status", "detail": str(exc)[:160]})
+        elif path == "/api/assistant/enqueue":
+            if not self.require_reminder_store():
+                return
+            try:
+                payload = self.read_json()
+                if set(payload) - {"command", "confirm", "timezone"}:
+                    raise ValueError("Only command, confirm, and timezone fields are accepted")
+                command = payload.get("command")
+                if not isinstance(command, str) or not command.strip():
+                    raise ValueError("command must be a non-empty string")
+                confirm = payload.get("confirm", False)
+                if not isinstance(confirm, bool):
+                    raise ValueError("confirm must be a boolean")
+                timezone_name = payload.get("timezone")
+
+                task_id = str(uuid4())
+                task_data = {
+                    "id": task_id,
+                    "command": command.strip(),
+                    "confirm": confirm,
+                    "timezone": timezone_name,
+                    "status": "queued",
+                    "queued_at": time.time(),
+                }
+                with _TASK_HISTORY_LOCK:
+                    _TASK_HISTORY[task_id] = task_data
+                _ASSISTANT_QUEUE.put(task_data)
+
+                # Broadcast queue update event
+                _BROADCASTER.broadcast("task_queued", {
+                    "task_id": task_id,
+                    "command": command.strip(),
+                    "queue_size": _ASSISTANT_QUEUE.qsize(),
+                })
+
+                # Return 202 Accepted immediately
+                self.send_json(202, {
+                    "ok": True,
+                    "task_id": task_id,
+                    "status": "queued",
+                    "message": f"Command enqueued for processing: '{command.strip()}'",
+                })
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                self.send_json(400, {"error": str(exc)})
         elif path == "/api/reminders":
             if not self.require_reminder_store():
                 return
@@ -212,6 +381,50 @@ class Handler(SimpleHTTPRequestHandler):
             except Exception:
                 self.log_error("Assistant command failed")
                 self.send_json(500, {"error": "Could not complete the local command"})
+        elif path == "/api/assistant/enqueue":
+            if not self.require_reminder_store():
+                return
+            try:
+                payload = self.read_json()
+                if set(payload) - {"command", "confirm", "timezone"}:
+                    raise ValueError("Only command, confirm, and timezone fields are accepted")
+                command = payload.get("command")
+                if not isinstance(command, str) or not command.strip():
+                    raise ValueError("command must be a non-empty string")
+                confirm = payload.get("confirm", False)
+                if not isinstance(confirm, bool):
+                    raise ValueError("confirm must be a boolean")
+                timezone_name = payload.get("timezone")
+
+                task_id = str(uuid4())
+                task_data = {
+                    "id": task_id,
+                    "command": command.strip(),
+                    "confirm": confirm,
+                    "timezone": timezone_name,
+                    "status": "queued",
+                    "queued_at": time.time(),
+                }
+                with _TASK_HISTORY_LOCK:
+                    _TASK_HISTORY[task_id] = task_data
+                _ASSISTANT_QUEUE.put(task_data)
+
+                # Broadcast queue update event
+                _BROADCASTER.broadcast("task_queued", {
+                    "task_id": task_id,
+                    "command": command.strip(),
+                    "queue_size": _ASSISTANT_QUEUE.qsize(),
+                })
+
+                # Return 202 Accepted immediately
+                self.send_json(202, {
+                    "ok": True,
+                    "task_id": task_id,
+                    "status": "queued",
+                    "message": f"Command enqueued for processing: '{command.strip()}'",
+                })
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                self.send_json(400, {"error": str(exc)})
         elif path == "/api/reminders":
             if not self.require_reminder_store():
                 return
@@ -367,9 +580,36 @@ if __name__ == "__main__":
 
     scheduler = Scheduler(Handler.reminder_store)
     scheduler.start()
+
+    assistant_worker = AssistantWorker(lambda: Handler.reminder_store)
+    assistant_worker.start()
+
+    class TelemetryBroadcaster(Thread):
+        """Streams system telemetry over SSE periodically to eliminate client HTTP polling."""
+
+        def __init__(self):
+            super().__init__(name="DeskOSTelemetryBroadcaster", daemon=True)
+            self.stopping = Event()
+
+        def run(self):
+            while not self.stopping.wait(3):
+                if _BROADCASTER._subscribers:
+                    try:
+                        with CACHE_LOCK:
+                            status_data = collect_status()
+                        _BROADCASTER.broadcast("status", status_data)
+                    except Exception as exc:
+                        print(f"[DeskOS] Telemetry broadcast error: {exc}", flush=True)
+
+    telemetry_thread = TelemetryBroadcaster()
+    telemetry_thread.start()
     try:
         server.serve_forever()
     finally:
         scheduler.stopping.set()
-        scheduler.join(timeout=6)
+        assistant_worker.stopping.set()
+        telemetry_thread.stopping.set()
+        scheduler.join(timeout=3)
+        assistant_worker.join(timeout=3)
+        telemetry_thread.join(timeout=3)
         server.server_close()

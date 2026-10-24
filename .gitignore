@@ -4,3 +4,4 @@ __pycache__/
 .env
 .DS_Store
 /static/sounds/my-alert.mp3
+data/*
