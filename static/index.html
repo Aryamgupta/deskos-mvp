@@ -1,301 +1,1606 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#04060a"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="application-name" content="DeskOS"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/deskos.svg" type="image/svg+xml"><title>DeskOS</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#05080e"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="application-name" content="DeskOS"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/deskos.svg" type="image/svg+xml"><title>DeskOS · Car Console</title>
 <style>
-:root{color-scheme:dark;--bg:#04060a;--card:rgba(255,255,255,.04);--line:rgba(255,255,255,.08);--muted:#6f7d8f;--soft:#a9b6c6;--text:#eaf4fb;--led:#e9fbff;--cy:#5fe0ff;--amber:#ffb44d;--green:#7cf0ae;--red:#ff7d7d}
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;min-height:100%;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
-body{background:radial-gradient(1100px 650px at 50% 28%,#0f1a26,#04060a 72%);background-attachment:fixed;padding:clamp(10px,2vw,26px);overflow-x:hidden}
-.shell{max-width:1400px;margin:auto}
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
-.brand{font-size:14px;font-weight:700;letter-spacing:.08em;display:flex;align-items:baseline;gap:10px;min-width:0}.brand b{font-weight:400;letter-spacing:0;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.top-actions{display:flex;align-items:center;gap:8px}
-.status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--soft);padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);white-space:nowrap}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}.dot.off{background:var(--red);box-shadow:0 0 10px var(--red)}
-.pill,.btn,.fullscreen-btn{background:var(--card);color:var(--soft);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:12px;font-family:inherit;white-space:nowrap}
-.pill:active,.btn:active{transform:scale(.96)}
-.btn.listening{background:rgba(255,125,125,.18)!important;color:var(--red)!important;border-color:rgba(255,125,125,.6)!important;animation:micPulse 1.2s infinite ease-in-out}
-@keyframes micPulse{0%,100%{box-shadow:0 0 5px rgba(255,125,125,.5)}50%{box-shadow:0 0 18px rgba(255,125,125,.85)}}
-#ambientBtn{color:var(--cy);border-color:rgba(95,224,255,.35)}
-.cluster{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:clamp(8px,2vw,24px)}
-.gcol{display:grid;justify-items:center;gap:8px}
-.gauge{position:relative;width:clamp(96px,26vh,200px);aspect-ratio:1}
-.gauge svg{width:100%;height:100%;transform:rotate(135deg)}
-.trk,.arc{fill:none;stroke-width:7;stroke-linecap:round}
-.trk{stroke:rgba(255,255,255,.08);stroke-dasharray:75 100}
-.arc{stroke:var(--cy);stroke-dasharray:0 100;transition:stroke-dasharray .6s;filter:drop-shadow(0 0 4px rgba(95,224,255,.7))}
-.arc.mid{stroke:var(--amber)}.arc.hi{stroke:var(--red)}
-.g-in{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding-top:6%}
-.g-val{font-size:clamp(24px,5vh,44px);font-weight:300;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
-.unit{font-size:.4em;color:var(--muted);letter-spacing:0}
-.g-lbl{font-size:12px;color:var(--soft);margin-top:2px}
-.g-note{font-size:11px;color:var(--muted);text-align:center;max-width:180px}
-.center{background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.012));border:1px solid var(--line);border-radius:28px;box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 70px rgba(95,224,255,.04);padding:clamp(16px,3vh,32px) clamp(12px,2vw,28px);text-align:center;min-width:0;cursor:pointer}
-.clock{--h:clamp(48px,min(26vh,25vw),130px);height:var(--h);display:flex;align-items:center;justify-content:center;gap:calc(var(--h)*.07);filter:drop-shadow(0 0 7px rgba(140,228,255,.55));margin:0 auto}
-.d{height:100%;width:auto;transform:skewX(-5deg)}
-.s{fill:rgba(255,255,255,.05)}.s.on{fill:var(--led)}
-.d.sec{height:42%;align-self:flex-end}.d.sec .s.on{fill:var(--amber)}
-.colon{display:flex;flex-direction:column;justify-content:space-evenly;height:70%;padding:0 calc(var(--h)*.03)}
-.colon i{display:block;width:calc(var(--h)*.09);height:calc(var(--h)*.09);border-radius:50%;background:var(--led);animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{50%{opacity:.2}}
-.date{color:var(--soft);font-size:clamp(13px,2.2vh,18px);margin-top:clamp(10px,2vh,20px)}
-.greet{color:var(--muted);font-size:12px;margin-top:3px}
-.clock-foot{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:clamp(8px,1.6vh,16px);color:var(--muted);font-size:11px}
-.tag{border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--cy);font-size:11px;white-space:nowrap}
-.offline{display:none;margin:12px 0;padding:10px 14px;border:1px solid rgba(255,125,125,.3);border-radius:14px;color:var(--red);font-size:13px}
-.alert-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 8px}.alert-state{font-size:11px;color:var(--muted)}
-.warning-list{display:grid;gap:7px;margin:0 0 4px}
-.warning{padding:9px 14px;border:1px solid rgba(255,180,77,.3);border-radius:14px;color:var(--amber);background:rgba(255,180,77,.07);font-size:13px}
-.warning.critical{border-color:rgba(255,125,125,.35);color:var(--red);background:rgba(255,125,125,.08)}
-.warning.ok{border-color:var(--line);color:var(--muted);background:transparent;font-size:12px}
-.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
-.tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;min-width:0}
-.k{font-size:11px;color:var(--muted)}
-.v{font-size:clamp(14px,2.2vh,17px);font-weight:500;margin-top:6px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.v.big{font-size:clamp(22px,3.4vh,30px);font-weight:300;letter-spacing:-.03em}
-.bar{height:4px;border-radius:8px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:8px}
-.fill{height:100%;width:0;background:linear-gradient(90deg,#3fb8d6,var(--cy));border-radius:8px;transition:width .5s}.fill.mid{background:var(--amber)}.fill.hi{background:var(--red)}
-.n{font-size:10px;color:var(--muted);margin-top:7px;overflow-wrap:anywhere}
-.bottom{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin-top:10px}
-.reminders{margin-top:10px}
-.reminder-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.reminder-form{display:grid;grid-template-columns:minmax(140px,1.4fr) minmax(170px,1fr) minmax(110px,.7fr) auto;gap:8px;margin-top:12px}
-.reminder-form input,.reminder-form select{min-width:0;background:#0a1018;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:13px}
-.reminder-form button,.reminder-action{background:var(--card);color:var(--soft);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font:inherit;font-size:12px}
-.reminder-form button{background:var(--cy);color:#03141a;border-color:transparent;font-weight:650}
-.reminder-form button[type=button]{background:var(--card);color:var(--soft);border-color:var(--line);font-weight:400}
-.reminder-form button[hidden]{display:none}
-.reminder-list{display:grid;gap:8px;margin-top:12px}
-.reminder-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:9px}
-.reminder-title{font-size:13px;overflow-wrap:anywhere}.reminder-meta{font-size:11px;color:var(--muted);margin-top:3px}
-.reminder-actions{display:flex;gap:6px;flex-shrink:0}.reminder-action{padding:6px 9px}.reminder-action.delete{color:var(--red)}
-.reminder-empty{font-size:12px;color:var(--muted);padding:4px 0}
-.reminder-dialog{width:min(92vw,480px);border:1px solid rgba(255,180,77,.45);border-radius:20px;background:#111720;color:var(--text);padding:20px;box-shadow:0 16px 60px #000c}
-.reminder-dialog::backdrop{background:#000a}.reminder-dialog h2{margin:0;font-size:18px}.reminder-dialog p{line-height:1.5;color:var(--soft)}
-.reminder-dialog button{background:var(--cy);color:#03141a;border:0;border-radius:999px;padding:10px 16px;font-weight:650}
-.assistant{margin-top:10px}
-.assistant-form{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px}
-.assistant-form input{min-width:0;background:#0a1018;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:13px}
-.assistant-form button{background:var(--cy);color:#03141a;border:0;border-radius:12px;padding:9px 14px;font:inherit;font-size:12px;font-weight:650}
-.assistant-output{margin-top:10px;min-height:20px;color:var(--soft);font-size:13px;line-height:1.5}
-.assistant-examples{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.assistant-example{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font:inherit;font-size:11px}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;min-width:0}
-.sub{font-size:12px;color:var(--muted)}
-.runtime-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chip{border:1px solid rgba(124,240,174,.25);color:var(--green);background:rgba(124,240,174,.08);border-radius:999px;padding:5px 12px;font-size:12px}.chip.empty{border-color:var(--line);color:var(--muted);background:transparent}
-.focus{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.focus-time{font-size:32px;font-weight:300;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-#focusBtn{background:var(--cy);color:#03141a;border-color:transparent;font-weight:600}
-.footer{display:flex;justify-content:space-between;gap:12px;color:#4f5b6b;font-size:11px;padding:14px 4px 2px}
-.alert-toast{display:none;position:fixed;z-index:99;left:50%;bottom:18px;transform:translateX(-50%);width:min(92vw,520px);padding:14px 16px;border:1px solid rgba(255,180,77,.4);border-radius:18px;background:#1c1810;color:var(--amber);box-shadow:0 12px 40px #000a}
-.alert-toast.critical{border-color:rgba(255,125,125,.45);background:#1e1112;color:var(--red)}
-.alert-toast.assistant-result{border-color:rgba(95,224,255,.5);background:#091522;color:var(--cy);box-shadow:0 14px 50px rgba(0,0,0,.7),0 0 25px rgba(95,224,255,.15)}
-.alert-toast.show{display:block}
-.toast-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:650;font-size:13px}.toast-message{font-size:13px;line-height:1.45;margin-top:8px}
-.toast-close{background:transparent;color:inherit;border:1px solid currentColor;border-radius:999px;padding:4px 10px;font-size:11px}
-.ambient .gcol,.ambient .strip,.ambient .bottom,.ambient .reminders,.ambient .assistant,.ambient .footer,.ambient .alert-tools,.ambient .warning-list{display:none}
-.ambient .cluster{grid-template-columns:1fr}.ambient .top{opacity:.55}
-.ambient .center{min-height:72vh;display:flex;flex-direction:column;justify-content:center;background:transparent;border-color:transparent;box-shadow:none}
-.ambient .clock{--h:min(36vh,27vw)}.ambient .date{font-size:clamp(15px,3vh,24px)}
-.ambient .offline{max-width:620px;margin:14px auto 0;text-align:center;border-color:var(--line);color:var(--muted)}
-@media(max-width:760px) and (orientation:portrait){.cluster{grid-template-columns:1fr 1fr;grid-template-areas:"c c" "l r"}.center{grid-area:c}.gcol.l{grid-area:l}.gcol.r{grid-area:r}.bottom{grid-template-columns:1fr}.strip{grid-template-columns:1fr 1fr}.status span:last-child{display:none}}
-@media(max-width:760px){.reminder-form{grid-template-columns:1fr 1fr}.reminder-form input:first-child{grid-column:1/-1}.reminder-head{align-items:flex-start;flex-direction:column}.reminder-row{align-items:flex-start}.reminder-actions{flex-direction:column}}
-@media(orientation:landscape) and (max-height:500px){body{padding:8px 14px}.top{margin-bottom:8px}.strip{grid-template-columns:repeat(6,1fr);gap:8px}.tile{padding:8px 10px}.n{display:none}.center{padding:10px}.g-note{display:none}}
-@media(prefers-reduced-motion:reduce){.colon i{animation:none}.arc,.fill{transition:none}}
-</style></head>
-<body><main class="shell" id="app">
-<header class="top"><div class="brand">DESKOS<b id="hostname">Waiting for laptop</b></div><div class="top-actions"><div class="status"><span id="dot" class="dot"></span><span id="connection">Connecting to laptop</span></div><button class="pill" id="ambientBtn" type="button">Ambient clock</button><button class="pill fullscreen-btn" id="fullscreenBtn" type="button">Fullscreen</button></div></header>
-<section class="cluster">
-<div class="gcol l"><div class="gauge"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="42" pathLength="100"/><circle class="arc" id="cpuBar" cx="50" cy="50" r="42" pathLength="100"/></svg><div class="g-in"><div class="g-val" id="cpu">—<span class="unit"> %</span></div><div class="g-lbl">CPU load</div></div></div><div class="g-note">Processor utilization</div></div>
-<article class="center clock-panel" id="clockPanel"><div class="clock" id="clock" aria-label="Time"></div><div class="date" id="date">Loading date…</div><div class="greet" id="greet"></div><div class="clock-foot"><span id="clockState">Workstation companion</span><span class="tag" id="modeTag">Live monitor</span></div></article>
-<div class="gcol r"><div class="gauge"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="42" pathLength="100"/><circle class="arc" id="ramBar" cx="50" cy="50" r="42" pathLength="100"/></svg><div class="g-in"><div class="g-val" id="ram">—<span class="unit"> %</span></div><div class="g-lbl">Memory</div></div></div><div class="g-note" id="ramNote">RAM usage</div></div>
-</section>
-<div class="offline" id="offline">Laptop unavailable — showing clock only. Metrics are hidden to prevent stale readings.</div>
-<div class="alert-tools"><span class="alert-state" id="alertState">Phone alerts are off until enabled.</span><div style="display:flex;gap:8px;align-items:center"><select id="speechLang" class="pill" style="background:#0d1520;color:var(--cy);border-color:rgba(95,224,255,.3);padding:6px 10px;font-size:11px" title="Mic Language"><option value="en-IN">English (India)</option><option value="hi-IN">Hindi (हिंदी / Hinglish)</option><option value="en-US">English (US)</option></select><select id="voiceSelect" class="pill" style="max-width:200px;background:#0d1520;color:var(--cy);border-color:rgba(95,224,255,.3);padding:6px 10px;font-size:11px" title="Choose Voice Style"><option value="auto">Auto (Best Gemini Voice)</option></select><button class="btn" id="enableAlerts" type="button">Enable phone alerts</button></div></div><div class="warning-list" id="warnings" aria-live="polite"><div class="warning ok">Monitoring is lightweight. Warnings appear only when thresholds persist.</div></div><aside class="alert-toast" id="alertToast" role="alert" aria-live="assertive"><div class="toast-head"><span id="toastTitle">DeskOS warning</span><button class="toast-close" id="toastClose" type="button">Dismiss</button></div><div class="toast-message" id="toastMessage"></div></aside>
-<section class="strip" id="monitoring">
-<div class="tile"><div class="k">Storage</div><div class="v big" id="disk">—<span class="unit"> %</span></div><div class="bar"><div class="fill" id="diskBar"></div></div><div class="n" id="diskNote">Root filesystem</div></div>
-<div class="tile"><div class="k">Network</div><div class="v big" id="netRate">—</div><div class="bar"><div class="fill" id="netBar"></div></div><div class="n" id="network">—</div></div>
-<div class="tile"><div class="k">Battery</div><div class="v" id="battery">—</div></div>
-<div class="tile"><div class="k">Disk read / write</div><div class="v" id="diskActivity">—</div></div>
-<div class="tile"><div class="k">CPU temperature</div><div class="v" id="temp">Checking…</div></div>
-<div class="tile"><div class="k">System uptime</div><div class="v" id="uptime">—</div></div>
-</section>
-<section class="bottom"><article class="panel"><div class="k">Developer environment · Node.js &amp; Bun</div><div class="sub" style="margin-top:4px">Detected processes (not yet health checks)</div><div class="runtime-list" id="runtimes"><span class="chip empty">Waiting for system status</span></div></article>
-<article class="panel"><div class="k">Focus session · 25 min</div><div class="focus" style="margin-top:6px"><div><div class="focus-time" id="focusTime">25:00</div><div class="sub" id="focusLabel">Ready when you are</div></div><div style="display:flex;gap:6px"><button class="btn" id="focusBtn">Start</button><button class="btn" id="resetBtn">Reset</button></div></div></article></section>
-<section class="reminders panel" id="reminderPanel"><div class="reminder-head"><div><div class="k">Local reminders</div><div class="sub" id="reminderState" style="margin-top:4px">Saved on this DeskOS host · delivery runs while the service is on</div></div></div><form class="reminder-form" id="reminderForm"><input id="reminderTitle" name="title" maxlength="160" placeholder="What should I remind you?" required><input id="reminderDue" name="due_at" type="datetime-local" required><select id="reminderRecurrence" name="recurrence" aria-label="Repeat"><option value="none">One time</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select><button id="reminderSubmit" type="submit">Add reminder</button><button id="reminderCancelEdit" type="button" hidden>Cancel edit</button></form><div class="reminder-list" id="reminderList" aria-live="polite"><div class="reminder-empty">Loading reminders…</div></div></section>
-<section class="assistant panel" id="assistantPanel"><div class="k">DeskOS Assistant · Natural AI Companion</div><div class="sub" style="margin-top:4px">Powered by Gemini with smart context. Speak with the mic or type natural language commands.</div><form class="assistant-form" id="assistantForm" style="grid-template-columns:1fr auto auto"><input id="assistantCommand" maxlength="1000" autocomplete="off" placeholder="e.g. Set a reminder to call Rishabh at 3pm today" required><button id="voiceInputBtn" type="button" class="btn" style="background:#0d1e2e;color:var(--cy);border-color:rgba(95,224,255,.4);display:flex;align-items:center;gap:6px" title="Hold or Click to Speak"><svg id="micIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg><span id="voiceBtnText">Voice</span></button><button id="assistantSubmit" type="submit">Ask DeskOS</button></form><div class="assistant-examples" aria-label="Example commands"><button class="assistant-example" type="button" data-command="Set a reminder for calling Rishabh at 3pm today">Remind to call Rishabh</button><button class="assistant-example" type="button" data-command="How is my laptop doing?">Laptop status</button><button class="assistant-example" type="button" data-command="What are my reminders for today?">Show reminders</button></div><div class="assistant-output" id="assistantOutput" role="status" aria-live="polite">Ready for your voice or typed commands.</div></section>
-<dialog class="reminder-dialog" id="reminderDialog"><h2>DeskOS reminder</h2><p id="reminderDialogText"></p><button id="ackReminder" type="button">Acknowledge</button></dialog>
-<footer class="footer"><span id="hostSub">DeskOS will connect over your local network.</span><span id="updated">Waiting for first update</span></footer>
-</main>
-<script>
-const $=id=>document.getElementById(id);let lastSeen=0,focusLeft=1500,focusRun=false,focusInterval=null,ambient=false,lastOnline=null,cpuHot=0,ramHot=0,tempHot=0,alertsEnabled=false,lastWarningKey='',toastTimer=null,audioContext=null;
-const SG='abcdefg',MAP=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
-const HZ=y=>`10,${y} 15,${y-5} 45,${y-5} 50,${y} 45,${y+5} 15,${y+5}`,VT=(x,a,b)=>`${x},${a} ${x+5},${a+5} ${x+5},${b-5} ${x},${b} ${x-5},${b-5} ${x-5},${a+5}`;
-const PTS={a:HZ(6),g:HZ(52),d:HZ(98),f:VT(6,9,49),b:VT(54,9,49),e:VT(6,55,95),c:VT(54,55,95)};
-const dig=c=>`<svg class="d ${c}" viewBox="0 0 60 104">${[...SG].map(k=>`<polygon class="s" data-k="${k}" points="${PTS[k]}"/>`).join('')}</svg>`;
-$('clock').innerHTML=dig('')+dig('')+'<span class="colon"><i></i><i></i></span>'+dig('')+dig('')+dig('sec')+dig('sec');
-const DG=[...$('clock').querySelectorAll('.d')];let lastT='';
-function clockTick(){const d=new Date(),t=[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join('');if(t===lastT)return;[...t].forEach((ch,i)=>{if(!lastT||lastT[i]!==ch)DG[i].querySelectorAll('.s').forEach(s=>s.classList.toggle('on',MAP[ch].includes(s.dataset.k)))});lastT=t;$('date').textContent=d.toLocaleDateString([], {weekday:'long',year:'numeric',month:'long',day:'numeric'});const h=d.getHours();$('greet').textContent=h<5?'Late night. Rest soon.':h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Winding down for the night';}
-function duration(s){s=Math.max(0,Math.floor(s||0));const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h ${m}m`:h?`${h}h ${m}m`:`${m}m ${s%60}s`;}
-function bytes(n){if(n<1024)return n+' B/s';const u=['KB/s','MB/s','GB/s'];let i=-1;do{n/=1024;i++}while(n>=1024&&i<u.length-1);return n.toFixed(1)+' '+u[i];}
-function metric(value,valueId,barId){const v=Math.max(0,Math.min(100,value||0)),st=v>=90?' hi':v>=75?' mid':'',el=$(barId);$(valueId).innerHTML=`${Math.round(value)}<span class="unit"> %</span>`;if(el.tagName.toLowerCase()==='circle'){el.style.strokeDasharray=(v*.75)+' 100';el.setAttribute('class','arc'+st);}else{el.style.width=v+'%';el.className='fill'+st;}}
-function showWarnings(s){
-  const warnings=[];
-  const cpu=Number(s.cpu_percent)||0;
-  const ram=Number(s.memory?.percent)||0;
-  cpuHot=cpu>=90?cpuHot+1:0;
-  ramHot=ram>=90?ramHot+1:0;
-  const cpuTemperature=Number(s.cpu_temperature?.celsius);
-  const hottest=Number.isFinite(cpuTemperature)?cpuTemperature:null;
-  tempHot=hottest!==null&&hottest>=85?tempHot+1:0;
-  if(cpuHot>=3)warnings.push({key:'cpu-high',text:`High CPU usage sustained (${Math.round(cpu)}%). Check active development tasks if this persists.`,critical:false});
-  if(ramHot>=3)warnings.push({key:'ram-high',text:`RAM usage is high (${Math.round(ram)}%). Consider closing unused applications if the system feels slow.`,critical:false});
-  if(tempHot>=2)warnings.push({key:'cpu-temperature-high',text:`High CPU temperature (${Math.round(hottest)} °C). Check ventilation and workload.`,critical:hottest>=95});
-  const rootFree=Number(s.disk?.free)||0,rootTotal=Number(s.disk?.total)||0;
-  if(rootTotal>0&&rootFree/rootTotal<0.08)warnings.push({key:'disk-low',text:'Low free storage: less than 8% remains on the monitored filesystem.',critical:false});
-  $('warnings').innerHTML=warnings.length?warnings.map(w=>`<div class="warning ${w.critical?'critical':''}">${esc(w.text)}</div>`).join(''):'<div class="warning ok">System status looks normal. Threshold checks are lightweight and sample-based.</div>';
-  const activeWarningKeys=warnings.map(w=>w.key);
-  const previousWarningKeys=lastWarningKey?lastWarningKey.split('|'):[];
-  const newWarning=warnings.find(w=>!previousWarningKeys.includes(w.key));
-  if(newWarning)showAlert(newWarning.text,newWarning.critical);
-  const warningKey=activeWarningKeys.join('|');
-  lastWarningKey=warningKey;
+:root{
+  color-scheme:dark;
+  --bg-deep:#05080e;
+  --bg-surface:#0a1017;
+  --card-bg:#0d1520;
+  --card-border:rgba(95,224,255,.14);
+  --card-border-subtle:rgba(255,255,255,.07);
+  --cy:#38d9f5;
+  --cy-glow:rgba(56,217,245,.4);
+  --amber:#ffaa33;
+  --green:#3fe694;
+  --green-glow:rgba(63,230,148,.4);
+  --red:#ff5c5c;
+  --text-main:#f0f6fc;
+  --text-sub:#8b9bb0;
+  --text-dim:#55667a;
+  --led:#ebfbff;
 }
-function setOnline(on){
-  $('dot').classList.toggle('off',!on);
-  $('connection').textContent=on?'Laptop online':'Laptop offline';
-  $('offline').style.display=on?'none':'block';
-  $('monitoring').style.opacity=on?'1':'.18';
-  $('clockState').textContent=on?'Workstation online':'Clock mode · laptop offline';
-  $('modeTag').textContent=on?'Live monitor':'Ambient clock';
-  // Switch modes only when connectivity changes, so manual ambient mode remains usable while online.
-  if(lastOnline!==on){
-    ambient=!on;
-    document.body.classList.toggle('ambient',ambient);
-    $('ambientBtn').textContent=ambient?'Show dashboard':'Ambient clock';
-    lastOnline=on;
-  }
-  if(!on){
-    cpuHot=0;ramHot=0;tempHot=0;lastWarningKey='';
-    $('hostname').textContent='Laptop unavailable';$('hostSub').textContent='Waiting for DeskOS service to return';
-    $('uptime').textContent='—';$('battery').textContent='—';$('network').textContent='—';$('diskActivity').textContent='—';$('temp').textContent='—';
-    $('cpu').innerHTML='—<span class="unit"> %</span>';$('ram').innerHTML='—<span class="unit"> %</span>';$('disk').innerHTML='—<span class="unit"> %</span>';
-    ['cpuBar','ramBar'].forEach(i=>$(i).style.strokeDasharray='0 100');$('netRate').textContent='—';$('runtimes').innerHTML='<span class="chip empty">Laptop offline</span>';
-  }
-}
-function renderStatus(s) {
-  lastSeen = Date.now();
-  setOnline(true);
-  $('hostname').textContent = s.hostname || 'Ubuntu workstation';
-  $('hostSub').textContent = 'Live SSE stream connected · zero polling';
-  $('uptime').textContent = duration(s.uptime_seconds);
-  $('battery').textContent = s.battery ? `${s.battery.percent}% · ${s.battery.plugged ? 'Charging / plugged' : 'On battery'}` : 'Not reported';
-  $('network').textContent = `↓ ${bytes(s.network.down_bytes_sec)} · ↑ ${bytes(s.network.up_bytes_sec)}`;
-  const da = s.disk && s.disk.activity;
-  $('diskActivity').textContent = da ? `↓ ${bytes(da.read_bytes_sec)} · ↑ ${bytes(da.write_bytes_sec)}` : 'Not reported';
-  const cpuTemperature = s.cpu_temperature;
-  $('temp').textContent = cpuTemperature ? `${cpuTemperature.celsius} °C · ${cpuTemperature.sensor}` : 'CPU temperature unavailable';
-  showWarnings(s);
-  metric(s.cpu_percent, 'cpu', 'cpuBar');
-  metric(s.memory.percent, 'ram', 'ramBar');
-  metric(s.disk.percent, 'disk', 'diskBar');
-  $('ramNote').textContent = `${(s.memory.used / 1073741824).toFixed(1)} / ${(s.memory.total / 1073741824).toFixed(1)} GB used`;
-  $('diskNote').textContent = `${(s.disk.free / 1073741824).toFixed(1)} GB free on root filesystem`;
-  const rate = s.network.down_bytes_sec + s.network.up_bytes_sec;
-  $('netRate').textContent = bytes(rate).replace('/s', '');
-  $('netBar').style.width = Math.min(100, rate / 1048576 * 100) + '%';
-  const procs = s.runtimes || [];
-  $('runtimes').innerHTML = procs.length ? procs.map(p => `<span class="chip">${esc(p.runtime)} · PID ${p.pid}</span>`).join('') : '<span class="chip empty">No Node.js/Bun processes detected</span>';
-  $('updated').textContent = 'Updated ' + new Date(s.timestamp * 1000).toLocaleTimeString();
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{
+  width:100%;height:100vh;height:100dvh;
+  overflow:hidden;
+  background:#05080e;
+  color:var(--text-main);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  user-select:none;
 }
 
-async function update(){
-  // Initial fallback fetch on page load if stream is connecting
-  if (lastSeen && Date.now() - lastSeen < 6000) return;
+/* === MAIN AUTOMOTIVE CONSOLE CHASSIS === */
+.console-chassis{
+  display:grid;
+  grid-template-rows:44px 1fr 62px;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+  position:relative;
+  background:radial-gradient(120% 100% at 50% 10%, #0d1a29 0%, #05080e 80%);
+}
+
+/* === TOP TELEMETRY STATUS BAR === */
+.telemetry-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 14px;
+  background:rgba(5,8,14,.92);
+  border-bottom:1px solid var(--card-border-subtle);
+  backdrop-filter:blur(10px);
+  z-index:20;
+  font-size:12px;
+}
+.telem-left, .telem-center, .telem-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.badge-status{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:rgba(63,230,148,.08);
+  border:1px solid rgba(63,230,148,.25);
+  border-radius:999px;
+  padding:2px 8px;
+  color:var(--green);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.03em;
+}
+.pulse-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);
+}
+.pulse-dot.off{background:var(--red);box-shadow:0 0 8px var(--red)}
+.telem-host{
+  color:var(--text-sub);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.02em;
+}
+.telem-host b{color:var(--text-main);margin-right:4px}
+.pill-widget{
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--card-border-subtle);
+  border-radius:999px;
+  padding:2px 10px;
+  color:var(--text-sub);
+  font-size:11px;
+}
+.btn-top{
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--card-border-subtle);
+  border-radius:8px;
+  color:var(--text-sub);
+  padding:3px 9px;
+  font-size:11px;
+  cursor:pointer;
+}
+.btn-top:active{transform:scale(.95)}
+
+/* === VIEWPORT DISPLAY DECKS CONTAINER === */
+.deck-container{
+  position:relative;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+}
+.deck{
+  position:absolute;
+  inset:0;
+  display:none;
+  padding:10px 14px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .15s ease-in-out;
+  overflow:hidden;
+}
+.deck.active{
+  display:grid;
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* === DECK 1: CAR COCKPIT / CLUSTER VIEW === */
+#deck-cockpit{
+  grid-template-columns:1fr 1.35fr 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+.cluster-pod{
+  background:linear-gradient(180deg, rgba(16,25,38,.85) 0%, rgba(10,16,25,.85) 100%);
+  border:1px solid var(--card-border);
+  border-radius:18px;
+  padding:12px 14px;
+  display:flex;
+  flex-direction:column;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 8px 30px rgba(0,0,0,.5);
+  position:relative;
+  overflow:hidden;
+}
+
+/* Left Pod: Telemetry Gauges */
+.pod-title{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.08em;
+  color:var(--text-dim);
+  text-transform:uppercase;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+}
+.pod-title span{color:var(--cy)}
+.gauges-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  flex:1;
+  align-items:center;
+}
+.gauge-card{
+  background:rgba(5,9,15,.6);
+  border:1px solid var(--card-border-subtle);
+  border-radius:14px;
+  padding:8px 4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+.radial-box{
+  position:relative;
+  width:clamp(65px,14vh,85px);
+  aspect-ratio:1;
+}
+.radial-box svg{
+  width:100%;height:100%;
+  transform:rotate(135deg);
+}
+.radial-trk, .radial-arc{
+  fill:none;
+  stroke-width:8;
+  stroke-linecap:round;
+}
+.radial-trk{stroke:rgba(255,255,255,.07);stroke-dasharray:75 100}
+.radial-arc{
+  stroke:var(--cy);
+  stroke-dasharray:0 100;
+  transition:stroke-dasharray .6s cubic-bezier(.2,0,0,1);
+  filter:drop-shadow(0 0 6px var(--cy-glow));
+}
+.radial-arc.mid{stroke:var(--amber);filter:drop-shadow(0 0 6px rgba(255,170,51,.4))}
+.radial-arc.hi{stroke:var(--red);filter:drop-shadow(0 0 6px rgba(255,92,92,.5))}
+.radial-val{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding-top:4%;
+  font-size:clamp(16px,3vh,22px);
+  font-weight:300;
+  letter-spacing:-.03em;
+}
+.radial-val .lbl{
+  font-size:9px;
+  color:var(--text-sub);
+  margin-top:2px;
+  letter-spacing:0;
+}
+.mini-telemetry-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  margin-top:6px;
+}
+.mini-stat{
+  background:rgba(5,9,15,.4);
+  border:1px solid var(--card-border-subtle);
+  border-radius:8px;
+  padding:5px 8px;
+}
+.mini-stat .k{font-size:9px;color:var(--text-dim)}
+.mini-stat .v{font-size:11px;font-weight:600;color:var(--text-main);margin-top:1px}
+
+/* Center Pod: Central Digital Clock, HUD Speedometer & Mode Selector */
+.center-hud{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  text-align:center;
+  padding:12px 10px 8px;
+}
+.clock-display{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:4px;
+  margin:auto 0;
+  filter:drop-shadow(0 0 10px rgba(56,217,245,.4));
+}
+.clock-display svg.d{
+  height:clamp(38px,9vh,62px);
+  width:auto;
+  transform:skewX(-5deg);
+}
+.clock-display svg.d.sec{
+  height:clamp(20px,4.8vh,32px);
+  margin-bottom:clamp(3px,0.8vh,6px);
+}
+.s{fill:rgba(255,255,255,.05);transition:fill .15s}
+.s.on{fill:var(--led)}
+.d.sec .s.on{fill:var(--amber)}
+.colon{
+  display:flex;flex-direction:column;justify-content:space-evenly;
+  height:60%;padding:0 2px;
+}
+.colon i{
+  width:6px;height:6px;border-radius:50%;background:var(--led);
+  animation:hudPulse 2s infinite ease-in-out;
+}
+@keyframes hudPulse{50%{opacity:.25}}
+.hud-date{
+  font-size:clamp(11px,1.8vh,13px);
+  color:var(--text-sub);
+  font-weight:500;
+  margin-top:2px;
+}
+.hud-speedo{
+  margin:4px 0;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.hud-speedo-val{
+  font-size:clamp(24px,4.8vh,36px);
+  font-weight:200;
+  letter-spacing:-.04em;
+  color:var(--cy);
+  line-height:1;
+  text-shadow:0 0 12px var(--cy-glow);
+}
+.hud-speedo-lbl{
+  font-size:9px;
+  color:var(--text-dim);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-top:2px;
+}
+
+/* Automotive Mode Switcher Bar at Bottom of Center Pod */
+.car-mode-bar{
+  display:flex;
+  width:100%;
+  background:rgba(5,8,14,.7);
+  border:1px solid var(--card-border-subtle);
+  border-radius:10px;
+  padding:3px;
+  gap:3px;
+}
+.car-mode-btn{
+  flex:1;
+  background:transparent;
+  border:0;
+  border-radius:6px;
+  padding:6px 0;
+  color:var(--text-dim);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.04em;
+  cursor:pointer;
+  transition:all .15s;
+}
+.car-mode-btn.active{
+  background:rgba(56,217,245,.14);
+  color:var(--cy);
+  box-shadow:inset 0 0 0 1px var(--card-border);
+}
+
+/* Right Pod: Focus Engine & Quick Desk Actions */
+.focus-card{
+  background:rgba(5,9,15,.6);
+  border:1px solid var(--card-border-subtle);
+  border-radius:14px;
+  padding:10px;
+  text-align:center;
+  margin-bottom:8px;
+}
+.focus-timer-text{
+  font-size:clamp(22px,4vh,30px);
+  font-weight:300;
+  color:var(--amber);
+  text-shadow:0 0 8px rgba(255,170,51,.35);
+  font-variant-numeric:tabular-nums;
+}
+.focus-btns{
+  display:flex;
+  gap:6px;
+  margin-top:6px;
+}
+.btn-focus{
+  flex:1;
+  background:rgba(255,170,51,.15);
+  border:1px solid rgba(255,170,51,.4);
+  border-radius:8px;
+  color:var(--amber);
+  padding:6px;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+}
+.btn-focus.reset{
+  background:rgba(255,255,255,.05);
+  border-color:var(--card-border-subtle);
+  color:var(--text-sub);
+}
+.car-quick-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  flex:1;
+}
+.car-quick-tile{
+  background:rgba(5,9,15,.5);
+  border:1px solid var(--card-border-subtle);
+  border-radius:12px;
+  padding:8px 4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  cursor:pointer;
+  transition:background .15s, border-color .15s;
+}
+.car-quick-tile:active{transform:scale(.97)}
+.car-quick-tile svg{margin-bottom:4px;stroke:var(--cy)}
+.car-quick-tile .title{font-size:10px;font-weight:600;color:var(--text-main)}
+.car-quick-tile .sub{font-size:8px;color:var(--text-dim);margin-top:1px}
+
+/* === DECK 2: TASKS & AGENDA === */
+#deck-tasks{
+  grid-template-columns:1.5fr 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+.task-list-pod{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.task-header-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+}
+.task-scroll-area{
+  flex:1;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding-right:4px;
+}
+.task-scroll-area::-webkit-scrollbar{width:4px}
+.task-scroll-area::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:4px}
+.task-row{
+  background:rgba(5,9,15,.65);
+  border:1px solid var(--card-border-subtle);
+  border-radius:12px;
+  padding:8px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.task-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.task-title{font-size:12px;font-weight:500;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-badge-row{display:flex;align-items:center;gap:6px;font-size:9px}
+.task-badge{padding:2px 6px;border-radius:4px;font-weight:600;text-transform:uppercase}
+.task-badge.high{background:rgba(255,92,92,.18);color:var(--red);border:1px solid rgba(255,92,92,.4)}
+.task-badge.normal{background:rgba(56,217,245,.1);color:var(--cy);border:1px solid rgba(56,217,245,.3)}
+.task-badge.low{background:rgba(255,255,255,.05);color:var(--text-dim);border:1px solid var(--card-border-subtle)}
+.task-btn-check{
+  background:rgba(63,230,148,.1);
+  border:1px solid rgba(63,230,148,.3);
+  color:var(--green);
+  border-radius:8px;
+  padding:6px 10px;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.task-btn-check:active{transform:scale(.95)}
+
+.task-form-pod{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.car-input{
+  background:rgba(5,9,15,.7);
+  border:1px solid var(--card-border-subtle);
+  border-radius:10px;
+  padding:8px 12px;
+  color:var(--text-main);
+  font-size:12px;
+  font-family:inherit;
+  outline:none;
+}
+.car-input:focus{border-color:var(--cy)}
+.car-btn-submit{
+  background:linear-gradient(135deg, var(--cy) 0%, #299fba 100%);
+  border:0;
+  border-radius:10px;
+  color:#03141a;
+  padding:10px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  letter-spacing:.02em;
+}
+
+/* === DECK: REMINDERS (/reminders) === */
+#deck-reminders{
+  grid-template-columns:1.5fr 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+
+/* === DECK 3: VOICE ASSISTANT NEURAL CORE === */
+#deck-voice{
+  grid-template-columns:1fr 1.3fr 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+.voice-state-pod{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  position:relative;
+}
+.voice-visualizer{
+  position:relative;
+  width:clamp(80px,18vh,120px);
+  aspect-ratio:1;
+  display:grid;
+  place-content:center;
+}
+.orb-ring{
+  position:absolute;inset:0;
+  border:2px solid var(--cy);
+  border-radius:50%;
+  opacity:.3;
+  animation:pulseRing 3s infinite ease-out;
+}
+@keyframes pulseRing{
+  0%{transform:scale(.8);opacity:.6}
+  100%{transform:scale(1.25);opacity:0}
+}
+.orb-core{
+  width:clamp(60px,14vh,90px);
+  height:clamp(60px,14vh,90px);
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #5fe0ff 0%, #0d3852 65%, #051421 100%);
+  box-shadow:0 0 25px var(--cy-glow);
+  display:grid;place-content:center;
+  transition:all .25s ease-out;
+}
+.orb-core.listening{
+  background:radial-gradient(circle at 35% 35%, #ff7d7d 0%, #661818 65%, #2b0808 100%);
+  box-shadow:0 0 35px rgba(255,92,92,.7);
+  transform:scale(1.06);
+}
+.push-to-talk-bar{
+  width:100%;
+  max-width:280px;
+  margin-top:12px;
+  background:linear-gradient(135deg, rgba(56,217,245,.2) 0%, rgba(56,217,245,.06) 100%);
+  border:1px solid var(--cy);
+  border-radius:12px;
+  padding:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  color:var(--cy);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.04em;
+  cursor:pointer;
+  box-shadow:0 0 15px rgba(56,217,245,.15);
+  transition:all .15s;
+}
+.push-to-talk-bar:active{transform:scale(.97)}
+.push-to-talk-bar.listening{
+  background:rgba(255,92,92,.2);
+  border-color:var(--red);
+  color:var(--red);
+  box-shadow:0 0 20px rgba(255,92,92,.3);
+}
+
+.voice-transcript-pod{
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.transcript-bubble{
+  background:rgba(5,9,15,.7);
+  border:1px solid var(--card-border-subtle);
+  border-radius:12px;
+  padding:12px;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-height:0;
+}
+.transcript-label{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.transcript-text{font-size:13px;color:var(--text-main);line-height:1.4;overflow-y:auto}
+.assistant-reply-bubble{
+  background:rgba(9,21,34,.7);
+  border:1px solid rgba(56,217,245,.3);
+  border-radius:12px;
+  padding:12px;
+  flex:1;
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-height:0;
+}
+.assistant-reply-text{font-size:12px;color:var(--cy);line-height:1.4;overflow-y:auto}
+
+/* === DECK 4: DESK ANALYTICS (FULL HARDWARE & PRODUCTIVITY) === */
+#deck-analytics{
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+.an-grid-2x2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  flex:1;
+}
+.metric-kpi-card{
+  background:rgba(5,9,15,.65);
+  border:1px solid var(--card-border-subtle);
+  border-radius:14px;
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.kpi-num{
+  font-size:clamp(22px,3.8vh,32px);
+  font-weight:200;
+  letter-spacing:-.04em;
+  color:var(--cy);
+  margin:4px 0;
+}
+.kpi-num.amber{color:var(--amber)}
+.kpi-num.green{color:var(--green)}
+.kpi-sub{font-size:9px;color:var(--text-dim)}
+
+/* === DEDICATED FULL-BLEED AMBIENT SCREENSAVER DECK === */
+#deck-ambient{
+  position:fixed;
+  inset:0;
+  background:#020407;
+  z-index:100;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:20px;
+}
+#deck-ambient.active{
+  display:flex;
+}
+.ambient-clock-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+.ambient-clock-display{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:clamp(6px,2vw,14px);
+  filter:drop-shadow(0 0 25px rgba(56,217,245,.55));
+}
+.ambient-clock-display svg.d{
+  height:clamp(60px,24vh,150px);
+  width:auto;
+  transform:skewX(-5deg);
+}
+.ambient-clock-display svg.d.sec{
+  height:clamp(32px,13vh,80px);
+  margin-bottom:clamp(5px,1.8vh,12px);
+}
+.ambient-date{
+  font-size:clamp(14px,3vh,24px);
+  color:var(--text-sub);
+  letter-spacing:.05em;
+  margin-top:16px;
+  font-weight:400;
+}
+.ambient-hint{
+  position:absolute;
+  bottom:24px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:11px;
+  color:var(--text-dim);
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--card-border-subtle);
+  border-radius:999px;
+  padding:4px 14px;
+}
+
+/* === BOTTOM AUTOMOTIVE NAVIGATION DOCK === */
+.automotive-dock{
+  background:rgba(5,8,14,.95);
+  border-top:1px solid var(--card-border-subtle);
+  display:flex;
+  align-items:center;
+  justify-content:space-around;
+  padding:0 8px;
+  z-index:30;
+  backdrop-filter:blur(12px);
+}
+.dock-btn{
+  background:transparent;
+  border:0;
+  border-radius:12px;
+  color:var(--text-dim);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  height:48px;
+  width:clamp(50px,14vw,84px);
+  cursor:pointer;
+  transition:all .15s;
+}
+.dock-btn svg{width:18px;height:18px;stroke:currentColor;transition:stroke .15s}
+.dock-btn span{font-size:8.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.dock-btn:active{transform:scale(.92)}
+.dock-btn.active{
+  color:var(--cy);
+  background:rgba(56,217,245,.1);
+  box-shadow:inset 0 0 0 1px var(--card-border);
+}
+.dock-btn.active svg{stroke:var(--cy);filter:drop-shadow(0 0 5px var(--cy-glow))}
+
+/* Dedicated Center Voice Trigger in Dock */
+.dock-btn.mic-dock-btn{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg, rgba(56,217,245,.2) 0%, rgba(56,217,245,.05) 100%);
+  border:1px solid var(--cy);
+  color:var(--cy);
+  box-shadow:0 0 12px rgba(56,217,245,.25);
+}
+.dock-btn.mic-dock-btn.listening{
+  background:rgba(255,92,92,.25);
+  border-color:var(--red);
+  color:var(--red);
+  animation:micPulse 1.2s infinite ease-in-out;
+}
+@keyframes micPulse{0%,100%{box-shadow:0 0 5px rgba(255,92,92,.5)}50%{box-shadow:0 0 18px rgba(255,92,92,.85)}}
+
+/* Generic Alert Toast */
+.alert-toast{
+  display:none;position:fixed;z-index:99;left:50%;bottom:74px;transform:translateX(-50%);
+  width:min(90vw,480px);padding:10px 14px;border-radius:12px;font-size:12px;
+  background:#091522;border:1px solid var(--cy);color:var(--cy);
+  box-shadow:0 10px 40px rgba(0,0,0,.8);
+}
+.alert-toast.show{display:flex;align-items:center;justify-content:space-between}
+.alert-toast button{background:transparent;border:0;color:inherit;font-size:12px;cursor:pointer;padding-left:10px}
+</style>
+</head>
+<body>
+
+<div class="console-chassis" id="app">
+  <!-- TOP TELEMETRY STATUS BAR -->
+  <header class="telemetry-bar">
+    <div class="telem-left">
+      <div class="badge-status">
+        <span class="pulse-dot" id="dot"></span>
+        <span id="connection">ONLINE</span>
+      </div>
+      <div class="telem-host"><b id="hostname">DESKOS</b> <span id="hostSub">Workstation Companion</span></div>
+    </div>
+    <div class="telem-center">
+      <div class="pill-widget" id="uptimeWidget">UPTIME: —</div>
+      <div class="pill-widget" id="tempWidget">TEMP: —</div>
+    </div>
+    <div class="telem-right">
+      <button class="btn-top" id="wakeWordToggleBtn" type="button" title="Wake word status">🎙️ Wake: On</button>
+      <button class="btn-top" id="ambientToggleBtn" type="button">Ambient</button>
+      <button class="btn-top" id="fullscreenToggleBtn" type="button">Fullscreen</button>
+    </div>
+  </header>
+
+  <!-- VIEWPORT DISPLAY DECKS (FIXED 100VH, ZERO SCROLL) -->
+  <main class="deck-container">
+    
+    <!-- DECK 1: CAR COCKPIT / CLUSTER VIEW (/ or /cockpit) -->
+    <section class="deck active" id="deck-cockpit">
+      <!-- Left Pod: Telemetry Gauges -->
+      <article class="cluster-pod">
+        <div class="pod-title">SYSTEM TELEMETRY <span id="kernelVer">LIVE</span></div>
+        <div class="gauges-grid">
+          <!-- CPU Gauge -->
+          <div class="gauge-card">
+            <div class="radial-box">
+              <svg viewBox="0 0 100 100">
+                <circle class="radial-trk" cx="50" cy="50" r="42" pathLength="100"/>
+                <circle class="radial-arc" id="cpuBar" cx="50" cy="50" r="42" pathLength="100"/>
+              </svg>
+              <div class="radial-val" id="cpuVal">0%<span class="lbl">CPU LOAD</span></div>
+            </div>
+          </div>
+          <!-- RAM Gauge -->
+          <div class="gauge-card">
+            <div class="radial-box">
+              <svg viewBox="0 0 100 100">
+                <circle class="radial-trk" cx="50" cy="50" r="42" pathLength="100"/>
+                <circle class="radial-arc" id="ramBar" cx="50" cy="50" r="42" pathLength="100"/>
+              </svg>
+              <div class="radial-val" id="ramVal">0%<span class="lbl">RAM USED</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="mini-telemetry-row">
+          <div class="mini-stat">
+            <div class="k">STORAGE (NVME)</div>
+            <div class="v" id="diskVal">—</div>
+          </div>
+          <div class="mini-stat">
+            <div class="k">DISK READ / WRITE</div>
+            <div class="v" id="diskIoVal">—</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Center Pod: Automotive Digital HUD & Speedometer/Clock -->
+      <article class="cluster-pod center-pod center-hud" id="cockpitCenterHud">
+        <div class="pod-title">DESK COCKPIT · REALME DOCK</div>
+        <div class="clock-display" id="cockpitClock"></div>
+        <div class="hud-date" id="cockpitDate">Loading…</div>
+
+        <div class="hud-speedo">
+          <div class="hud-speedo-val" id="speedoRate">—</div>
+          <div class="hud-speedo-lbl">WORKSTATION THROUGHPUT</div>
+        </div>
+
+        <!-- Automotive Mode Selector Bar -->
+        <div class="car-mode-bar">
+          <button class="car-mode-btn" data-mode="standby" type="button">STANDBY</button>
+          <button class="car-mode-btn active" data-mode="work" type="button">WORK</button>
+          <button class="car-mode-btn" data-mode="code" type="button">CODE</button>
+          <button class="car-mode-btn" data-mode="focus" type="button">FOCUS</button>
+        </div>
+      </article>
+
+      <!-- Right Pod: Focus Engine & Quick Desk Controls -->
+      <article class="cluster-pod">
+        <div class="pod-title">FOCUS ENGINE <span id="focusLabel">READY</span></div>
+        <div class="focus-card">
+          <div class="focus-timer-text" id="focusTime">25:00</div>
+          <div class="focus-btns">
+            <button class="btn-focus" id="focusBtn">START</button>
+            <button class="btn-focus reset" id="resetBtn">RESET</button>
+          </div>
+        </div>
+
+        <div class="car-quick-grid">
+          <div class="car-quick-tile" id="tileQuickRemind">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <div class="title">REMINDERS</div>
+            <div class="sub" id="quickRemindSub">0 Scheduled</div>
+          </div>
+          <div class="car-quick-tile" id="tileQuickTasks">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <div class="title">TODAY'S TASKS</div>
+            <div class="sub" id="quickTaskCount">0 Pending</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- DECK 2: TASKS & AGENDA (/tasks) -->
+    <section class="deck" id="deck-tasks">
+      <article class="cluster-pod task-list-pod">
+        <div class="task-header-row">
+          <div class="pod-title" style="margin-bottom:0">PENDING TASKS &amp; AGENDAS</div>
+          <button class="btn-top" id="refreshTasksBtn" type="button">↻ Refresh</button>
+        </div>
+        <div class="task-scroll-area" id="tasksList">
+          <div style="color:var(--text-dim);font-size:12px;padding:8px">Loading active tasks…</div>
+        </div>
+      </article>
+
+      <article class="cluster-pod task-form-pod">
+        <div class="pod-title">ADD NEW TASK</div>
+        <form id="taskCreateForm" style="display:flex;flex-direction:column;gap:8px">
+          <input class="car-input" id="newTaskTitle" placeholder="e.g. Review pull request for DeskOS" required maxlength="200">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <select class="car-input" id="newTaskCategory">
+              <option value="work">Work</option>
+              <option value="dev">Development</option>
+              <option value="personal">Personal</option>
+            </select>
+            <select class="car-input" id="newTaskPriority">
+              <option value="high">High Priority</option>
+              <option value="normal" selected>Normal</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <button type="submit" class="car-btn-submit">+ CREATE TASK</button>
+        </form>
+
+        <div class="pod-title" style="margin-top:14px">QUICK VOICE COMMANDS</div>
+        <div style="font-size:11px;color:var(--text-sub);line-height:1.5">
+          Say or ask:<br>
+          • <i>"Hello Desk, add a task to test car console"</i><br>
+          • <i>"Hello Desk, what are my tasks for today?"</i><br>
+          • <i>"Hello Desk, mark task completed"</i>
+        </div>
+      </article>
+    </section>
+
+    <!-- DECK: REMINDERS (/reminders) -->
+    <section class="deck" id="deck-reminders">
+      <article class="cluster-pod task-list-pod">
+        <div class="task-header-row">
+          <div class="pod-title" style="margin-bottom:0">SCHEDULED REMINDERS</div>
+          <button class="btn-top" id="refreshRemindersBtn" type="button">↻ Refresh</button>
+        </div>
+        <div class="task-scroll-area" id="remindersList">
+          <div style="color:var(--text-dim);font-size:12px;padding:8px">Loading reminders…</div>
+        </div>
+      </article>
+
+      <article class="cluster-pod task-form-pod">
+        <div class="pod-title">ADD NEW REMINDER</div>
+        <form id="reminderCreateForm" style="display:flex;flex-direction:column;gap:8px">
+          <input class="car-input" id="newReminderTitle" placeholder="What should I remind you?" required maxlength="160">
+          <input class="car-input" id="newReminderDue" type="datetime-local" required>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <select class="car-input" id="newReminderRecurrence">
+              <option value="none">One time</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+            <button type="submit" class="car-btn-submit">+ SET REMINDER</button>
+          </div>
+        </form>
+
+        <div class="pod-title" style="margin-top:14px">VOICE SYNTAX</div>
+        <div style="font-size:11px;color:var(--text-sub);line-height:1.5">
+          Say or ask:<br>
+          • <i>"Hello Desk, remind me to call Rishabh at 5pm"</i><br>
+          • <i>"Hello Desk, what are my reminders?"</i><br>
+          • <i>"Hello Desk, cancel reminder"</i>
+        </div>
+      </article>
+    </section>
+
+    <!-- DECK 3: VOICE ASSISTANT NEURAL CORE (/voice) -->
+    <section class="deck" id="deck-voice">
+      <article class="cluster-pod voice-transcript-pod">
+        <div class="pod-title">SPEECH RECOGNITION (STT)</div>
+        <div class="transcript-bubble">
+          <div class="transcript-label">USER TRANSCRIPT / LIVE RECOGNITION</div>
+          <div class="transcript-text" id="voiceUserText">Say "Hello Desk" or tap Push to Talk to begin speaking…</div>
+        </div>
+      </article>
+
+      <article class="cluster-pod voice-state-pod">
+        <div class="pod-title">NEURAL CORE v4.8 <span id="voiceStatusBadge">READY</span></div>
+        <div class="voice-visualizer">
+          <div class="orb-ring"></div>
+          <div class="orb-core" id="orbCore">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </div>
+        </div>
+
+        <button class="push-to-talk-bar" id="pushToTalkBtn" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+          <span id="pushToTalkText">PUSH TO TALK</span>
+        </button>
+
+        <!-- Command Form with full width & aligned Send button -->
+        <form id="assistantFallbackForm" style="width:100%;max-width:320px;display:flex;gap:8px;margin-top:14px">
+          <input class="car-input" id="typedCommandInput" placeholder="Type command (e.g. check laptop status)…" style="flex:1;padding:8px 12px;font-size:12px">
+          <button type="submit" class="car-btn-submit" style="padding:8px 16px;font-size:12px;white-space:nowrap">SEND</button>
+        </form>
+      </article>
+
+      <article class="cluster-pod voice-transcript-pod">
+        <div class="pod-title">ASSISTANT RESPONSE (TTS)</div>
+        <div class="assistant-reply-bubble">
+          <div class="transcript-label" style="color:var(--cy)">DESKOS RESPONSE</div>
+          <div class="assistant-reply-text" id="voiceAssistantText">Ready for commands. Answers will appear here and speak natively in Hindi or Indian English.</div>
+        </div>
+      </article>
+    </section>
+
+    <!-- DECK 4: DESK ANALYTICS (/analytics) - FULL HARDWARE & METRICS -->
+    <section class="deck" id="deck-analytics">
+      <!-- Left Pod: Productivity & Focus Velocity -->
+      <article class="cluster-pod">
+        <div class="pod-title">PRODUCTIVITY &amp; VELOCITY <span>TODAY</span></div>
+        <div class="an-grid-2x2">
+          <div class="metric-kpi-card">
+            <div class="pod-title" style="margin:0">FOCUS TIME</div>
+            <div class="kpi-num amber" id="anFocusMin">0</div>
+            <div class="kpi-sub">MINUTES MONITORED</div>
+          </div>
+          <div class="metric-kpi-card">
+            <div class="pod-title" style="margin:0">SESSIONS</div>
+            <div class="kpi-num" id="anFocusSessions">0</div>
+            <div class="kpi-sub">25-MIN INTERVALS</div>
+          </div>
+          <div class="metric-kpi-card">
+            <div class="pod-title" style="margin:0">TASKS DONE</div>
+            <div class="kpi-num green" id="anTasksDone">0</div>
+            <div class="kpi-sub">DELIVERED TODAY</div>
+          </div>
+          <div class="metric-kpi-card">
+            <div class="pod-title" style="margin:0">PENDING QUEUE</div>
+            <div class="kpi-num" id="anTasksPending">0</div>
+            <div class="kpi-sub">ACTIVE IN BACKLOG</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Right Pod: Workstation Hardware Telemetry -->
+      <article class="cluster-pod">
+        <div class="pod-title">WORKSTATION TELEMETRY <span>HARDWARE</span></div>
+        <div class="an-grid-2x2">
+          <div class="metric-kpi-card">
+            <div class="pod-title" style="margin:0">CPU THERMAL</div>
+            <div class="kpi-num" id="anCpuTemp">—</div>
+            <div class="kpi-sub" id="anCpuSensor">CELSIUS</div>
+          </div>
+          <div class="metric-kpi-card">
+            <div class="pod-title" style="margin:0">SYSTEM UPTIME</div>
+            <div class="kpi-num" id="anUptime">—</div>
+            <div class="kpi-sub">TIME SINCE BOOT</div>
+          </div>
+          <div class="metric-kpi-card">
+            <div class="pod-title" style="margin:0">DISK ACTIVITY</div>
+            <div class="kpi-num" id="anDiskIo" style="font-size:16px;letter-spacing:0;font-weight:400">—</div>
+            <div class="kpi-sub">LIVE READ / WRITE</div>
+          </div>
+          <div class="metric-kpi-card">
+            <div class="pod-title" style="margin:0">NETWORK I/O</div>
+            <div class="kpi-num green" id="anNetIo" style="font-size:16px;letter-spacing:0;font-weight:400">—</div>
+            <div class="kpi-sub">DOWN / UP STREAM</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <!-- DEDICATED FULL-BLEED AMBIENT SCREENSAVER DECK (/ambient) -->
+  <section id="deck-ambient" title="Tap anywhere to exit ambient mode">
+    <div class="ambient-clock-wrap">
+      <div class="ambient-clock-display" id="ambientClock"></div>
+      <div class="ambient-date" id="ambientDate">Loading…</div>
+    </div>
+    <div class="ambient-hint">
+      <span class="pulse-dot" id="ambientDot"></span>
+      <span id="ambientStatusText">DeskOS Active · Tap anywhere to wake</span>
+    </div>
+  </section>
+
+  <!-- BOTTOM AUTOMOTIVE NAVIGATION DOCK -->
+  <nav class="automotive-dock">
+    <button class="dock-btn active" data-route="/cockpit" data-deck="deck-cockpit" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span>COCKPIT</span>
+    </button>
+
+    <button class="dock-btn" data-route="/tasks" data-deck="deck-tasks" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>TASKS</span>
+    </button>
+
+    <!-- Perfectly Centered Tactile TALK Button (3rd of 5 items) -->
+    <button class="dock-btn mic-dock-btn" id="dockMicBtn" type="button" title="Push to talk / Voice Assistant">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.3"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <span style="font-size:7px;margin-top:1px">TALK</span>
+    </button>
+
+    <button class="dock-btn" data-route="/reminders" data-deck="deck-reminders" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span>REMIND</span>
+    </button>
+
+    <button class="dock-btn" data-route="/analytics" data-deck="deck-analytics" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+      <span>ANALYTICS</span>
+    </button>
+  </nav>
+
+  <!-- Generic Bottom Alert Toast -->
+  <aside class="alert-toast" id="alertToast">
+    <span id="toastMessage">Notification</span>
+    <button type="button" onclick="$('alertToast').classList.remove('show')">✕</button>
+  </aside>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* === ROUTING & DECK SWITCHING SYSTEM === */
+const ROUTES = {
+  '/': 'deck-cockpit',
+  '/cockpit': 'deck-cockpit',
+  '/tasks': 'deck-tasks',
+  '/reminders': 'deck-reminders',
+  '/voice': 'deck-voice',
+  '/analytics': 'deck-analytics',
+  '/ambient': 'deck-ambient'
+};
+
+let previousNonAmbientRoute = '/cockpit';
+
+function navigateTo(path, push = true) {
+  const normPath = path === '/' ? '/cockpit' : path;
+  const deckId = ROUTES[normPath] || 'deck-cockpit';
+
+  if (normPath !== '/ambient') {
+    previousNonAmbientRoute = normPath;
+  }
+
+  // Update URL history state
+  if (push && window.location.pathname !== normPath) {
+    window.history.pushState({path: normPath}, '', normPath);
+  }
+
+  // Handle ambient screensaver mode
+  const isAmbient = (deckId === 'deck-ambient');
+  $('deck-ambient').classList.toggle('active', isAmbient);
+
+  // Switch standard view decks
+  document.querySelectorAll('.deck').forEach(d => {
+    d.classList.toggle('active', !isAmbient && d.id === deckId);
+  });
+
+  // Sync bottom dock button active state
+  document.querySelectorAll('.dock-btn[data-route]').forEach(b => {
+    b.classList.toggle('active', !isAmbient && b.dataset.route === normPath);
+  });
+
+  // Load data for specific decks
+  if (deckId === 'deck-tasks') refreshTasks();
+  if (deckId === 'deck-reminders') refreshReminders();
+  if (deckId === 'deck-analytics') refreshAnalytics();
+}
+
+window.addEventListener('popstate', () => {
+  navigateTo(window.location.pathname, false);
+});
+
+// Dock button click navigation
+document.querySelectorAll('.dock-btn[data-route]').forEach(btn => {
+  btn.addEventListener('click', () => navigateTo(btn.dataset.route));
+});
+
+// Quick action tile navigation
+$('tileQuickTasks').addEventListener('click', () => navigateTo('/tasks'));
+$('tileQuickRemind').addEventListener('click', () => navigateTo('/reminders'));
+
+// Ambient toggle button in top bar
+$('ambientToggleBtn').addEventListener('click', () => {
+  if (window.location.pathname === '/ambient') {
+    navigateTo(previousNonAmbientRoute);
+  } else {
+    navigateTo('/ambient');
+  }
+});
+
+// Tap anywhere on ambient screensaver to return to previous screen
+$('deck-ambient').addEventListener('click', () => {
+  navigateTo(previousNonAmbientRoute);
+});
+
+/* === COCKPIT MODE SELECTOR (STANDBY, WORK, CODE, FOCUS) === */
+let activeCockpitMode = 'work';
+const modeButtons = document.querySelectorAll('.car-mode-btn');
+
+function setCockpitMode(mode) {
+  activeCockpitMode = mode;
+  modeButtons.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  if (mode === 'focus') {
+    if (!focusRun) $('focusBtn').click();
+    showToast('Focus mode engaged: timer started.');
+  } else if (mode === 'standby') {
+    navigateTo('/ambient');
+  } else if (mode === 'code') {
+    showToast('Code mode active: workspace telemetry boosted.');
+  } else {
+    showToast('Work mode active: nominal companion telemetry.');
+  }
+}
+
+modeButtons.forEach(btn => {
+  btn.addEventListener('click', () => setCockpitMode(btn.dataset.mode));
+});
+
+/* === DUAL DIGITAL 7-SEGMENT CLOCKS (COCKPIT & AMBIENT) === */
+const SG = 'abcdefg', MAP = ['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
+const HZ = y => `10,${y} 15,${y-5} 45,${y-5} 50,${y} 45,${y+5} 15,${y+5}`, VT = (x,a,b) => `${x},${a} ${x+5},${a+5} ${x+5},${b-5} ${x},${b} ${x-5},${b-5} ${x-5},${a+5}`;
+const PTS = {a:HZ(6),g:HZ(52),d:HZ(98),f:VT(6,9,49),b:VT(54,9,49),e:VT(6,55,95),c:VT(54,55,95)};
+const dig = c => `<svg class="d ${c}" viewBox="0 0 60 104">${[...SG].map(k=>`<polygon class="s" data-k="${k}" points="${PTS[k]}"/>`).join('')}</svg>`;
+
+$('cockpitClock').innerHTML = dig('')+dig('')+'<span class="colon"><i></i><i></i></span>'+dig('')+dig('')+dig('sec')+dig('sec');
+$('ambientClock').innerHTML = dig('')+dig('')+'<span class="colon"><i></i><i></i></span>'+dig('')+dig('')+dig('sec')+dig('sec');
+
+const DG_COCKPIT = [...$('cockpitClock').querySelectorAll('.d')];
+const DG_AMBIENT = [...$('ambientClock').querySelectorAll('.d')];
+let lastT = '';
+
+function clockTick() {
+  const d = new Date(), t = [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2,'0')).join('');
+  if (t === lastT) return;
+
+  const updateDisplay = (dgList) => {
+    [...t].forEach((ch, i) => {
+      if (!lastT || lastT[i] !== ch) {
+        dgList[i].querySelectorAll('.s').forEach(s => s.classList.toggle('on', MAP[ch].includes(s.dataset.k)));
+      }
+    });
+  };
+
+  updateDisplay(DG_COCKPIT);
+  updateDisplay(DG_AMBIENT);
+
+  lastT = t;
+  const dateStr = d.toLocaleDateString([], {weekday:'long', year:'numeric', month:'short', day:'numeric'}).toUpperCase();
+  $('cockpitDate').textContent = dateStr;
+  $('ambientDate').textContent = dateStr;
+}
+clockTick();
+setInterval(clockTick, 250);
+
+/* === TELEMETRY & SSE SYSTEM METRICS === */
+let latestStatus = {};
+function bytes(n){if(n<1024)return n+' B/s';const u=['KB/s','MB/s','GB/s'];let i=-1;do{n/=1024;i++}while(n>=1024&&i<u.length-1);return n.toFixed(1)+' '+u[i];}
+function duration(s){s=Math.max(0,Math.floor(s||0));const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h`:h?`${h}h ${m}m`:`${m}m`;}
+
+function renderRadialMetric(val, valId, barId, label) {
+  const v = Math.max(0, Math.min(100, val || 0));
+  const el = $(barId);
+  $(valId).innerHTML = `${Math.round(v)}%<span class="lbl">${label}</span>`;
+  el.style.strokeDasharray = (v * 0.75) + ' 100';
+  el.className = 'radial-arc' + (v >= 90 ? ' hi' : v >= 75 ? ' mid' : '');
+}
+
+function renderStatus(s) {
+  latestStatus = s;
+  $('dot').classList.remove('off');
+  $('ambientDot').classList.remove('off');
+  $('connection').textContent = 'ONLINE';
+  $('hostname').textContent = (s.hostname || 'DESKOS').toUpperCase();
+  $('uptimeWidget').textContent = 'UPTIME: ' + duration(s.uptime_seconds);
+
+  const cpu = s.cpu_percent || 0;
+  const ram = s.memory ? s.memory.percent : 0;
+  renderRadialMetric(cpu, 'cpuVal', 'cpuBar', 'CPU LOAD');
+  renderRadialMetric(ram, 'ramVal', 'ramBar', 'RAM USED');
+
+  if (s.disk) {
+    $('diskVal').textContent = `${(s.disk.free / 1073741824).toFixed(0)} GB FREE`;
+    if (s.disk.activity) {
+      const rd = bytes(s.disk.activity.read_bytes_sec || 0);
+      const wr = bytes(s.disk.activity.write_bytes_sec || 0);
+      $('diskIoVal').textContent = `R ${rd} · W ${wr}`;
+    } else {
+      $('diskIoVal').textContent = 'IDLE';
+    }
+  }
+  if (s.network) {
+    const rate = (s.network.down_bytes_sec || 0) + (s.network.up_bytes_sec || 0);
+    $('speedoRate').textContent = bytes(rate).replace('/s', '');
+  }
+  if (s.cpu_temperature) {
+    $('tempWidget').textContent = `${s.cpu_temperature.celsius} °C`;
+  }
+
+  // Populate hardware telemetry inside analytics deck
+  $('anUptime').textContent = duration(s.uptime_seconds);
+  if (s.cpu_temperature) {
+    $('anCpuTemp').textContent = `${s.cpu_temperature.celsius}°C`;
+    $('anCpuSensor').textContent = s.cpu_temperature.sensor || 'NOMINAL';
+  }
+  if (s.disk && s.disk.activity) {
+    $('anDiskIo').textContent = `↓${bytes(s.disk.activity.read_bytes_sec)} ↑${bytes(s.disk.activity.write_bytes_sec)}`;
+  }
+  if (s.network) {
+    $('anNetIo').textContent = `↓${bytes(s.network.down_bytes_sec)} ↑${bytes(s.network.up_bytes_sec)}`;
+  }
+}
+
+let eventSource = null;
+function setupEventSource() {
+  if (eventSource) eventSource.close();
+  eventSource = new EventSource('/api/events');
+  eventSource.addEventListener('status', e => {
+    try { renderStatus(JSON.parse(e.data)); } catch (err) {}
+  });
+  eventSource.addEventListener('task_completed', e => {
+    try {
+      const data = JSON.parse(e.data);
+      const res = data.result || {};
+      const msg = res.message || 'Task completed.';
+      $('voiceAssistantText').textContent = msg;
+      speakText(msg);
+      showToast(msg);
+
+      // Handle assistant smart actions (timer, focus mode, ambient rest mode)
+      const tool = res.tool;
+      const resData = res.data || {};
+      if (tool === 'start_timer' || tool === 'set_focus_mode') {
+        const mins = Number(resData.minutes) || 25;
+        focusLeft = mins * 60;
+        focusRun = true;
+        if (focusInterval) clearInterval(focusInterval);
+        focusInterval = setInterval(() => {
+          focusLeft = Math.max(0, focusLeft - 1);
+          if (!focusLeft) {
+            focusRun = false;
+            clearInterval(focusInterval);
+            playTaskChime();
+            speakText("Timer completed. Great job!");
+          }
+          renderFocus();
+        }, 1000);
+        renderFocus();
+        setCockpitMode('focus');
+      } else if (tool === 'set_ambient_mode') {
+        navigateTo('/ambient');
+      }
+
+      refreshTasks();
+      refreshReminders();
+      refreshAnalytics();
+    } catch (err) {}
+  });
+}
+setupEventSource();
+
+/* Fallback status poll if SSE disconnects */
+async function fetchStatusFallback() {
   try {
     const r = await fetch('/api/status', {cache: 'no-store'});
     if (r.ok) renderStatus(await r.json());
   } catch(e) {
-    if (!lastSeen || Date.now() - lastSeen > 6500) setOnline(false);
+    $('dot').classList.add('off');
+    $('ambientDot').classList.add('off');
+    $('connection').textContent = 'OFFLINE';
   }
 }
+fetchStatusFallback();
 
-function showAlert(message,critical=false,title=null,theme=null){
-  if($('alertToast').classList.contains('show')&&$('alertToast').classList.contains('critical')&&!critical)return;
-  $('toastTitle').textContent=title || (critical?'Critical workstation warning':'DeskOS notification');
-  $('toastMessage').textContent=message;
-  $('alertToast').classList.remove('critical','assistant-result');
-  if(critical) $('alertToast').classList.add('critical');
-  if(theme==='assistant') $('alertToast').classList.add('assistant-result');
-  $('alertToast').classList.add('show');
-  if(toastTimer)clearTimeout(toastTimer);
-  if(!critical)toastTimer=setTimeout(closeAlert,10000);
-  if(alertsEnabled){
-    try{
-      if ('vibrate' in navigator) {
-        navigator.vibrate(
-          critical
-            ? [500, 150, 500, 150, 700, 150, 500]
-            : [400, 120, 400, 120, 400]
-        );
+/* === FOCUS SESSION TIMER === */
+let focusLeft = 1500, focusRun = false, focusInterval = null;
+function renderFocus() {
+  $('focusTime').textContent = `${String(Math.floor(focusLeft/60)).padStart(2,'0')}:${String(focusLeft%60).padStart(2,'0')}`;
+  $('focusBtn').textContent = focusRun ? 'PAUSE' : 'START';
+  $('focusLabel').textContent = focusRun ? 'ACTIVE' : focusLeft === 1500 ? 'READY' : 'PAUSED';
+}
+$('focusBtn').onclick = () => {
+  focusRun = !focusRun;
+  if (focusInterval) clearInterval(focusInterval);
+  if (focusRun) {
+    focusInterval = setInterval(() => {
+      focusLeft = Math.max(0, focusLeft - 1);
+      if (!focusLeft) {
+        focusRun = false;
+        clearInterval(focusInterval);
+        playTaskChime();
+        speakText("Focus session completed. Great job!");
       }
-    }catch(e){}
-    if(theme==='assistant'){
-      playTaskChime();
+      renderFocus();
+    }, 1000);
+  }
+  renderFocus();
+};
+$('resetBtn').onclick = () => {
+  focusRun = false;
+  clearInterval(focusInterval);
+  focusLeft = 1500;
+  renderFocus();
+};
+
+/* === TASK MANAGEMENT === */
+async function refreshTasks() {
+  try {
+    const r = await fetch('/api/tasks?all=1', {cache: 'no-store'});
+    if (!r.ok) return;
+    const data = await r.json();
+    renderTasks(data.tasks || []);
+  } catch (e) {
+    console.warn('Could not load tasks:', e);
+  }
+}
+
+function renderTasks(tasks) {
+  const container = $('tasksList');
+  const pending = tasks.filter(t => t.status === 'pending');
+  $('quickTaskCount').textContent = `${pending.length} Pending`;
+  $('anTasksPending').textContent = pending.length;
+
+  if (!tasks.length) {
+    container.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:12px">No tasks found. Create one above or speak to DeskOS.</div>';
+    return;
+  }
+  container.innerHTML = tasks.map(t => {
+    const isDone = t.status === 'completed';
+    const pri = t.priority || 'normal';
+    return `
+      <div class="task-row" style="${isDone ? 'opacity:.4;' : ''}">
+        <div class="task-info">
+          <div class="task-title" style="${isDone ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${esc(t.title)}</div>
+          <div class="task-badge-row">
+            <span class="task-badge ${esc(pri)}">${esc(pri)}</span>
+            <span style="color:var(--text-dim)">${esc(t.category || 'general')}</span>
+          </div>
+        </div>
+        ${!isDone ? `<button class="task-btn-check" onclick="markTaskDone('${esc(t.id)}')">✓ Done</button>` : '<span style="color:var(--green);font-size:10px;font-weight:600">✓ COMPLETED</span>'}
+      </div>
+    `;
+  }).join('');
+}
+
+async function markTaskDone(taskId) {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    await fetch('/api/assistant/enqueue', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({command: `complete task ${taskId}`, timezone: tz})
+    });
+    showToast('Task completing…');
+  } catch (e) {
+    alert('Failed to mark task completed');
+  }
+}
+
+$('taskCreateForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const title = $('newTaskTitle').value.trim();
+  const category = $('newTaskCategory').value;
+  const priority = $('newTaskPriority').value;
+  if (!title) return;
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  try {
+    await fetch('/api/assistant/enqueue', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({command: `create a ${priority} priority ${category} task: ${title}`, timezone: tz})
+    });
+    $('newTaskTitle').value = '';
+    showToast(`Task queued: "${title}"`);
+  } catch (err) {
+    alert('Could not submit task');
+  }
+});
+$('refreshTasksBtn').addEventListener('click', refreshTasks);
+
+/* === REMINDERS MANAGEMENT === */
+async function refreshReminders() {
+  try {
+    const r = await fetch('/api/reminders?all=1', {cache: 'no-store'});
+    if (!r.ok) return;
+    const data = await r.json();
+    renderReminders(data.reminders || []);
+  } catch (e) {
+    console.warn('Could not load reminders:', e);
+  }
+}
+
+function renderReminders(reminders) {
+  const container = $('remindersList');
+  const pending = reminders.filter(rem => rem.status === 'active');
+  const countSub = $('quickRemindSub');
+  if (countSub) countSub.textContent = `${pending.length} Scheduled`;
+  $('anRemindersActive').textContent = pending.length;
+
+  if (!reminders.length) {
+    container.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:12px">No scheduled reminders. Add one above or tell DeskOS.</div>';
+    return;
+  }
+  container.innerHTML = reminders.map(rem => {
+    const isDone = rem.status !== 'active';
+    const due = new Date(rem.due_at);
+    return `
+      <div class="task-row" style="${isDone ? 'opacity:.4;' : ''}">
+        <div class="task-info">
+          <div class="task-title" style="${isDone ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${esc(rem.title)}</div>
+          <div class="task-badge-row">
+            <span style="color:var(--cy)">${due.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${due.toLocaleDateString([], {month:'short',day:'numeric'})}</span>
+            <span style="color:var(--text-dim)">${esc(rem.recurrence !== 'none' ? rem.recurrence : 'One time')}</span>
+          </div>
+        </div>
+        ${!isDone ? `<button class="task-btn-check" style="color:var(--red);border-color:rgba(255,92,92,.3);background:rgba(255,92,92,.1)" onclick="deleteReminder('${esc(rem.id)}')">Cancel</button>` : '<span style="color:var(--text-dim);font-size:10px">DELIVERED</span>'}
+      </div>
+    `;
+  }).join('');
+}
+
+async function deleteReminder(reminderId) {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    await fetch('/api/assistant/enqueue', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({command: `cancel reminder ${reminderId}`, timezone: tz})
+    });
+    showToast('Cancelling reminder…');
+  } catch (e) {
+    alert('Failed to cancel reminder');
+  }
+}
+
+$('reminderCreateForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const title = $('newReminderTitle').value.trim();
+  const due = $('newReminderDue').value;
+  const recurrence = $('newReminderRecurrence').value;
+  if (!title || !due) return;
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  try {
+    const r = await fetch('/api/reminders', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        title,
+        due_at: new Date(due).toISOString(),
+        recurrence,
+        timezone: tz
+      })
+    });
+    if (r.ok) {
+      $('newReminderTitle').value = '';
+      $('newReminderDue').value = '';
+      showToast(`Reminder saved: "${title}"`);
+      refreshReminders();
     } else {
-      playBeep(critical);
+      alert('Could not save reminder. Ensure future time is picked.');
     }
+  } catch (err) {
+    alert('Failed to connect to reminder service');
   }
-}
-function closeAlert(){ $('alertToast').classList.remove('show');if(toastTimer)clearTimeout(toastTimer);toastTimer=null; }
+});
+$('refreshRemindersBtn').addEventListener('click', refreshReminders);
 
-let ttsEnabled = true;
-
-let availableVoices = [];
-
-function populateVoiceList() {
-  if (!('speechSynthesis' in window)) return;
-  // Include both English and Hindi voices for authentic native pronunciation
-  availableVoices = window.speechSynthesis.getVoices().filter(v => 
-    v.lang.startsWith('en') || v.lang.startsWith('hi')
-  );
-  const select = $('voiceSelect');
-  if (!select || availableVoices.length === 0) return;
-
-  const currentVal = select.value;
-  select.innerHTML = '<option value="auto">Auto (Native Detect: Hindi / Indian English)</option>';
-  availableVoices.forEach((v, idx) => {
-    const opt = document.createElement('option');
-    opt.value = String(idx);
-    opt.textContent = `${v.name} (${v.lang})`;
-    select.appendChild(opt);
-  });
-  if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
-    select.value = currentVal;
-  }
+/* === DESK ANALYTICS (PRODUCTIVITY & HARDWARE) === */
+async function refreshAnalytics() {
+  try {
+    const r = await fetch('/api/analytics', {cache: 'no-store'});
+    if (!r.ok) return;
+    const d = await r.json();
+    $('anFocusMin').textContent = d.focus_minutes_today || 0;
+    $('anFocusSessions').textContent = d.focus_sessions_today || 0;
+    $('anTasksDone').textContent = d.tasks_completed_today || 0;
+    $('anTasksPending').textContent = d.tasks_pending || 0;
+    $('anRemindersActive').textContent = d.active_reminders || 0;
+  } catch (e) {}
 }
 
-if ('speechSynthesis' in window) {
-  window.speechSynthesis.onvoiceschanged = populateVoiceList;
-  populateVoiceList();
+/* === TOAST ALERTS === */
+function showToast(msg) {
+  $('toastMessage').textContent = msg;
+  $('alertToast').classList.add('show');
+  setTimeout(() => $('alertToast').classList.remove('show'), 4000);
+}
+
+/* === AUDIO SYNTHESIS & RECOGNITION (TTS / STT / WAKE WORD) === */
+let audioContext = null;
+function playTaskChime() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!audioContext) audioContext = new Ctx();
+    if (audioContext.state === 'suspended') audioContext.resume();
+
+    const t = audioContext.currentTime;
+    const notes = [
+      { f: 783.99, start: 0.00, dur: 0.12 },
+      { f: 1046.50, start: 0.10, dur: 0.14 },
+      { f: 1318.51, start: 0.22, dur: 0.35 }
+    ];
+    notes.forEach(n => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(n.f, t + n.start);
+      gain.gain.setValueAtTime(0.001, t + n.start);
+      gain.gain.linearRampToValueAtTime(0.35, t + n.start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + n.start + n.dur);
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start(t + n.start);
+      osc.stop(t + n.start + n.dur);
+    });
+  } catch (err) {}
 }
 
 function containsHindi(text) {
-  // Check for Devanagari script characters (U+0900 to U+097F)
   if (/[\u0900-\u097F]/.test(text)) return true;
-  // Check for common Hindi/Hinglish vocabulary tokens
-  const hindiKeywords = /\b(aur|hai|hain|ka|ki|ke|ko|se|me|mein|par|karo|karna|kar|raha|rahi|ho|aap|tum|mujhe|hum|aaj|kal|baje|shaam|subah|yaad|dilana|kaisa|chal)\b/i;
-  return hindiKeywords.test(text);
+  return /\b(aur|hai|hain|ka|ki|ke|ko|se|me|mein|par|karo|karna|kar|raha|rahi|ho|aap|tum|mujhe|hum|aaj|kal|baje|shaam|subah|yaad|dilana|kaisa|chal)\b/i.test(text);
 }
 
+let isSpeaking = false;
+let speechUnlockTimer = null;
+
 function speakText(text) {
-  if (!ttsEnabled || !('speechSynthesis' in window)) return;
+  if (!('speechSynthesis' in window)) return;
   try {
-    window.speechSynthesis.cancel(); // Stop any pending speech
+    window.speechSynthesis.cancel();
+    if (speechUnlockTimer) clearTimeout(speechUnlockTimer);
+
     const cleanText = text.replace(/[•\n\r*`_#]/g, ' ').replace(/\s+/g, ' ').trim();
     if (!cleanText) return;
+
+    // Temporarily pause recognizer while the assistant speaks its own response
+    isSpeaking = true;
+    try {
+      if (recognizer && isListening) recognizer.stop();
+    } catch (e) {}
 
     const isHindi = containsHindi(cleanText);
     const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -303,323 +1608,258 @@ function speakText(text) {
     utterance.pitch = 1.0;
     utterance.lang = isHindi ? 'hi-IN' : 'en-IN';
 
-    const selectedIdx = $('voiceSelect') ? $('voiceSelect').value : 'auto';
-    if (selectedIdx !== 'auto' && availableVoices[Number(selectedIdx)]) {
-      utterance.voice = availableVoices[Number(selectedIdx)];
+    const voices = window.speechSynthesis.getVoices();
+    let preferred = null;
+    if (isHindi) {
+      preferred = voices.find(v => v.lang === 'hi-IN' || v.lang.startsWith('hi') || v.name.includes('Hindi') || v.name.includes('हिन्दी'))
+               || voices.find(v => v.lang === 'en-IN' || v.name.includes('India'));
     } else {
-      const voices = window.speechSynthesis.getVoices();
-      let preferred = null;
-      if (isHindi) {
-        // Find native Hindi voice first (Google हिन्दी, hi-IN)
-        preferred = voices.find(v => v.lang === 'hi-IN' || v.lang.startsWith('hi') || v.name.includes('Hindi') || v.name.includes('हिन्दी'))
-                 || voices.find(v => v.lang === 'en-IN' || v.name.includes('India'));
-      } else {
-        // Find native Indian English voice so Hindi loanwords/names sound authentic, not NRI
-        preferred = voices.find(v => v.lang === 'en-IN' || v.name.includes('India'))
-                 || voices.find(v => v.name.includes('Google US English'))
-                 || voices.find(v => v.lang.startsWith('en') && !v.name.includes('eSpeak'));
-      }
-      if (preferred) {
-        utterance.voice = preferred;
-      }
+      preferred = voices.find(v => v.lang === 'en-IN' || v.name.includes('India'))
+               || voices.find(v => v.name.includes('Google US English'))
+               || voices.find(v => v.lang.startsWith('en') && !v.name.includes('eSpeak'));
     }
+    if (preferred) utterance.voice = preferred;
+
+    const resumeListeningAfterSpeech = () => {
+      if (speechUnlockTimer) clearTimeout(speechUnlockTimer);
+      speechUnlockTimer = setTimeout(() => {
+        isSpeaking = false;
+        currentTranscript = '';
+        if (wakeWordActive && !isAwaitingCommand) {
+          startBackgroundWakeListener();
+        }
+      }, 400);
+    };
+
+    utterance.onend = resumeListeningAfterSpeech;
+    utterance.onerror = resumeListeningAfterSpeech;
+
+    // Fail-safe watchdog: Chrome SpeechSynthesis can fail to fire onend on mobile/long sentences
+    // Estimate spoken duration + 2s buffer, then forcefully reset isSpeaking
+    const estimatedDurationMs = Math.max(2500, (cleanText.length / 15) * 1000 + 2000);
+    speechUnlockTimer = setTimeout(() => {
+      if (isSpeaking) {
+        console.log('[DeskOS] Watchdog unlocking speech recognizer');
+        resumeListeningAfterSpeech();
+      }
+    }, estimatedDurationMs);
 
     window.speechSynthesis.speak(utterance);
   } catch (err) {
-    console.warn('Speech synthesis error:', err);
+    isSpeaking = false;
   }
 }
 
-const alertSound = new Audio('/sounds/my-alert.mp3');
-alertSound.preload = 'auto';
-alertSound.volume = 1.0;
-
-function playTaskChime() {
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    if (!audioContext) audioContext = new Ctx();
-    if (audioContext.state === 'suspended') {
-      audioContext.resume();
-    }
-
-    const t = audioContext.currentTime;
-    
-    // Play an energetic 3-tone chime: G5 -> C6 -> E6
-    const notes = [
-      { f: 783.99, start: 0.00, dur: 0.12 },
-      { f: 1046.50, start: 0.10, dur: 0.14 },
-      { f: 1318.51, start: 0.22, dur: 0.35 }
-    ];
-
-    notes.forEach(n => {
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(n.f, t + n.start);
-
-      gain.gain.setValueAtTime(0.001, t + n.start);
-      gain.gain.linearRampToValueAtTime(0.35, t + n.start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + n.start + n.dur);
-
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-
-      osc.start(t + n.start);
-      osc.stop(t + n.start + n.dur);
-    });
-  } catch (err) {
-    console.warn('Task chime error:', err);
-  }
-}
-
-async function playBeep(critical = false) {
-  try {
-    alertSound.pause();
-    alertSound.currentTime = 0;
-    await alertSound.play();
-  } catch (error) {
-    console.warn('DeskOS alert sound could not play:', error);
-  }
-}
-$('enableAlerts').addEventListener('click',async()=>{
-  alertsEnabled=true;
-  ttsEnabled=true;
-  try{
-    const Ctx=window.AudioContext||window.webkitAudioContext;
-    if(Ctx){
-      if(!audioContext) audioContext=new Ctx();
-      if(audioContext.state==='suspended') await audioContext.resume();
-    }
-  }catch(e){}
-  if('vibrate' in navigator) navigator.vibrate([100,60,100]);
-  playTaskChime();
-  speakText("DeskOS voice output is enabled and ready.");
-  $('alertState').textContent='Voice & alerts enabled · speaking answers aloud';
-  $('enableAlerts').textContent='Test voice output';
-});
-$('enableAlerts').addEventListener('dblclick',()=>{if(alertsEnabled){if('vibrate' in navigator)navigator.vibrate([100,60,100]);playBeep(true);}});
-$('toastClose').addEventListener('click',closeAlert);
-
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function renderFocus(){$('focusTime').textContent=`${String(Math.floor(focusLeft/60)).padStart(2,'0')}:${String(focusLeft%60).padStart(2,'0')}`;$('focusBtn').textContent=focusRun?'Pause':'Start';$('focusLabel').textContent=focusRun?'Focus session in progress':focusLeft===1500?'Ready when you are':focusLeft===0?'Session complete':'Paused';}
-$('focusBtn').onclick=()=>{focusRun=!focusRun;if(focusInterval)clearInterval(focusInterval);if(focusRun)focusInterval=setInterval(()=>{focusLeft=Math.max(0,focusLeft-1);if(!focusLeft){focusRun=false;clearInterval(focusInterval)}renderFocus()},1000);renderFocus()};$('resetBtn').onclick=()=>{focusRun=false;clearInterval(focusInterval);focusLeft=1500;renderFocus()};$('ambientBtn').onclick=()=>{ambient=!ambient;document.body.classList.toggle('ambient',ambient);$('ambientBtn').textContent=ambient?'Show dashboard':'Ambient clock'};
-let pendingReminderId=null,reminderRequestRunning=false,notificationRequestRunning=false,editingReminderId=null,activeReminders=[];
-const reminderDate=new Date(Date.now()-new Date().getTimezoneOffset()*60000);$('reminderDue').min=reminderDate.toISOString().slice(0,16);
-async function reminderRequest(url,options={}){const response=await fetch(url,{cache:'no-store',...options});let data={};try{data=await response.json()}catch(e){}if(!response.ok)throw Object.assign(new Error(data.error||`Request failed (${response.status})`),{status:response.status});return data;}
-function renderReminders(reminders){activeReminders=reminders;const list=$('reminderList');if(!reminders.length){list.innerHTML='<div class="reminder-empty">No active reminders. They remain stored locally across service restarts.</div>';return;}list.innerHTML=reminders.map(item=>{const due=new Date(item.due_at);const repeat=item.recurrence==='none'?'One time':item.recurrence==='daily'?'Repeats daily':`Repeats weekly · ${esc(item.timezone)}`;return `<div class="reminder-row"><div><div class="reminder-title">${esc(item.title)}</div><div class="reminder-meta">${esc(due.toLocaleString())} · ${repeat}</div></div><div class="reminder-actions"><button class="reminder-action" data-reminder-action="edit" data-reminder-id="${esc(item.id)}">Edit</button><button class="reminder-action" data-reminder-action="complete" data-reminder-id="${esc(item.id)}">Complete</button><button class="reminder-action delete" data-reminder-action="delete" data-reminder-id="${esc(item.id)}">Cancel</button></div></div>`;}).join('');}
-async function refreshReminders(){if(reminderRequestRunning)return;reminderRequestRunning=true;try{const data=await reminderRequest('/api/reminders');renderReminders(data.reminders||[]);$('reminderState').textContent='Saved on this DeskOS host · due reminders wait for acknowledgement';}catch(error){$('reminderState').textContent='Reminder service unavailable · saved data is unchanged';}finally{reminderRequestRunning=false;}}
-async function refreshReminderNotifications(){
-  if(notificationRequestRunning)return;
-  notificationRequestRunning=true;
-  try{
-    const data=await reminderRequest('/api/notifications');
-    const pending=data.notifications||[];
-    if(pending.length&&!$('reminderDialog').open){
-      const notice=pending[0];
-      pendingReminderId=notice.id;
-      $('reminderDialogText').textContent=`${notice.title} · scheduled ${new Date(notice.occurrence_at).toLocaleString()}`;
-      $('reminderDialog').showModal();
-      if(alertsEnabled){
-        try{if('vibrate' in navigator)navigator.vibrate([300,100,300]);}catch(e){}
-        playTaskChime();
-        speakText(`Reminder: ${notice.title}`);
-      }
-    }
-  }catch(e){}finally{notificationRequestRunning=false;}
-}
-$('reminderForm').addEventListener('submit',async event=>{event.preventDefault();const title=$('reminderTitle').value.trim(),localDue=$('reminderDue').value;if(!title||!localDue)return;const due=new Date(localDue);if(Number.isNaN(due.getTime())||due.getTime()<=Date.now()){ $('reminderState').textContent='Choose a future date and time.';return;}const editing=Boolean(editingReminderId);const url=editing?`/api/reminders/${encodeURIComponent(editingReminderId)}`:'/api/reminders';try{await reminderRequest(url,{method:editing?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due_at:due.toISOString(),recurrence:$('reminderRecurrence').value,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'})});editingReminderId=null;$('reminderTitle').value='';$('reminderDue').value='';$('reminderRecurrence').value='none';$('reminderSubmit').textContent='Add reminder';$('reminderCancelEdit').hidden=true;$('reminderState').textContent=editing?'Reminder updated.':'Reminder saved.';await refreshReminders();}catch(error){$('reminderState').textContent=error.message;}});
-$('reminderCancelEdit').addEventListener('click',()=>{editingReminderId=null;$('reminderForm').reset();$('reminderSubmit').textContent='Add reminder';$('reminderCancelEdit').hidden=true;$('reminderState').textContent='Edit cancelled.';});
-$('reminderList').addEventListener('click',async event=>{const button=event.target.closest('[data-reminder-action]');if(!button)return;const id=button.dataset.reminderId,action=button.dataset.reminderAction;if(action==='edit'){const item=activeReminders.find(reminder=>reminder.id===id);if(!item)return;editingReminderId=id;$('reminderTitle').value=item.title;const due=new Date(item.due_at);$('reminderDue').value=new Date(due.getTime()-due.getTimezoneOffset()*60000).toISOString().slice(0,16);$('reminderRecurrence').value=item.recurrence;$('reminderSubmit').textContent='Save changes';$('reminderCancelEdit').hidden=false;$('reminderTitle').focus();return;}button.disabled=true;try{await reminderRequest(action==='complete'?`/api/reminders/${encodeURIComponent(id)}/complete`:`/api/reminders/${encodeURIComponent(id)}`,{method:action==='complete'?'POST':'DELETE'});if(editingReminderId===id){editingReminderId=null;$('reminderForm').reset();$('reminderSubmit').textContent='Add reminder';$('reminderCancelEdit').hidden=true;}await refreshReminders();}catch(error){$('reminderState').textContent=error.message;button.disabled=false;}});
-$('ackReminder').addEventListener('click',async()=>{if(!pendingReminderId){$('reminderDialog').close();return;}const id=pendingReminderId;$('ackReminder').disabled=true;try{await reminderRequest(`/api/notifications/${encodeURIComponent(id)}/ack`,{method:'POST'});pendingReminderId=null;$('reminderDialog').close();await refreshReminderNotifications();await refreshReminders();}catch(error){if(error.status===404){pendingReminderId=null;$('reminderDialog').close();}else{$('reminderDialogText').textContent=`Could not acknowledge yet: ${error.message}`;}}finally{$('ackReminder').disabled=false;}});
-$('reminderDialog').addEventListener('cancel',event=>event.preventDefault());
-refreshReminders();refreshReminderNotifications();setInterval(refreshReminders,15000);setInterval(refreshReminderNotifications,5000);
-// Connect Server-Sent Events (SSE) for instant, real-time push notifications
-let eventSource = null;
-function setupEventSource() {
-  if (eventSource) {
-    eventSource.close();
-  }
-  eventSource = new EventSource('/api/events');
-  eventSource.addEventListener('status', e => {
-    try {
-      const data = JSON.parse(e.data);
-      renderStatus(data);
-    } catch (err) {}
-  });
-  eventSource.addEventListener('task_queued', e => {
-    try {
-      const data = JSON.parse(e.data);
-      $('assistantOutput').textContent = `⏳ Queued (${data.queue_size} in line): "${data.command}"`;
-    } catch (err) {}
-  });
-  eventSource.addEventListener('task_status', e => {
-    try {
-      const data = JSON.parse(e.data);
-      if (data.status === 'processing') {
-        $('assistantOutput').textContent = `⚙️ Processing: "${data.command}"…`;
-      }
-    } catch (err) {}
-  });
-  eventSource.addEventListener('task_completed', async e => {
-    try {
-      const data = JSON.parse(e.data);
-      const res = data.result || {};
-      const status = data.status;
-
-      if (status === 'needs_confirmation') {
-        $('assistantOutput').textContent = res.message;
-        if (window.confirm(res.message)) {
-          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-          await reminderRequest('/api/assistant/enqueue', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({command: data.command, confirm: true, timezone: tz})
-          });
-        }
-        return;
-      }
-
-      const msg = res.message || 'Task completed.';
-      $('assistantOutput').textContent = msg;
-
-      // Pop up a dedicated notification card for the assistant result
-      showAlert(msg, false, 'DeskOS Assistant Result', 'assistant');
-
-      // Speak result aloud through phone/laptop speaker
-      speakText(msg);
-
-      // Sync reminder list if a reminder was created or cancelled
-      if (res.ok && ['create_reminder', 'cancel_reminder'].includes(res.tool)) {
-        await refreshReminders();
-      }
-    } catch (err) {
-      console.warn('SSE task event parse error:', err);
-    }
-  });
-  eventSource.onerror = () => {
-    // EventSource automatically retries connection
-  };
-}
-setupEventSource();
-
-$('assistantForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  const command = $('assistantCommand').value.trim();
-  if (!command) return;
-
-  // Immediately clear input for instant snappy feel
-  $('assistantCommand').value = '';
-  $('assistantOutput').textContent = `⏳ Enqueued: "${command}"…`;
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-
-  try {
-    const res = await reminderRequest('/api/assistant/enqueue', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({command, timezone: tz})
-    });
-    // Brief toast confirmation that the task was accepted
-    showAlert(`Command queued: "${command}"`, false);
-  } catch (error) {
-    $('assistantOutput').textContent = `Error: ${error.message}`;
-  }
-});
-// Speech-to-Text (STT) Push-to-Talk Implementation with Debounced Silence Detection
+/* Unified STT & Wake Word Listener */
 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognizer = null;
 let isListening = false;
 let silenceTimer = null;
 let currentTranscript = '';
+let wakeWordActive = true;
+let isAwaitingCommand = false;
 
 if (SpeechRec) {
   recognizer = new SpeechRec();
-  // Continuous listening so it does not prematurely cut off while pausing between words
   recognizer.continuous = true;
   recognizer.interimResults = true;
-  recognizer.lang = 'en-IN'; // Default to Indian English / Hinglish-friendly model
+  recognizer.lang = navigator.language || 'en-IN';
 
   recognizer.onstart = () => {
     isListening = true;
-    currentTranscript = '';
-    $('voiceInputBtn').classList.add('listening');
-    $('voiceBtnText').textContent = 'Listening…';
-    $('assistantOutput').textContent = '🎙️ Listening… Speak at your own pace';
+    updateMicVisuals(isAwaitingCommand);
   };
 
   recognizer.onresult = event => {
+    // If the assistant is currently speaking aloud, discard audio so it does not listen to itself
+    if (isSpeaking) {
+      currentTranscript = '';
+      return;
+    }
+
     let interim = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const trans = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        currentTranscript += ' ' + trans;
-      } else {
-        interim += trans;
-      }
+      if (event.results[i].isFinal) currentTranscript += ' ' + trans;
+      else interim += trans;
     }
     const fullText = (currentTranscript + ' ' + interim).trim();
-    $('assistantCommand').value = fullText;
-    $('assistantOutput').textContent = `🎙️ "${fullText}"`;
 
-    // Increased pause tolerance: wait 2.2 seconds of silence before finalizing and submitting
-    if (silenceTimer) clearTimeout(silenceTimer);
-    silenceTimer = setTimeout(() => {
-      if (isListening) {
-        recognizer.stop();
+    // If wake word is active and we are idle, match natural conversational wake phrases:
+    if (wakeWordActive && !isAwaitingCommand) {
+      const lower = fullText.toLowerCase();
+      // Broadened phonetic wake phrase matcher (handles accents, casual phrasing, regional pronunciation)
+      const match = lower.match(/\b(hello\s*desk|hey\s*desk|ok\s*desk|desk\s*os|desk\s*assistant|hi\s*desk|hallo\s*desk|suno\s*desk|desk|desktop)\b/i);
+      if (match) {
+        playTaskChime();
+        isAwaitingCommand = true;
+        currentTranscript = '';
+        updateMicVisuals(true);
+        navigateTo('/voice');
+
+        const postWake = fullText.substring(match.index + match[0].length).trim();
+        if (postWake.length > 2) {
+          $('voiceUserText').textContent = `"${postWake}"`;
+        } else {
+          $('voiceUserText').textContent = 'Listening for command…';
+        }
+
+        if (silenceTimer) clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => {
+          if (isListening && isAwaitingCommand) submitSpokenCommand();
+        }, 2500);
       }
-    }, 2200);
+      return;
+    }
+
+    if (isAwaitingCommand) {
+      $('voiceUserText').textContent = `"${fullText}"`;
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        if (isListening && isAwaitingCommand) submitSpokenCommand();
+      }, 2200);
+    }
   };
 
   recognizer.onerror = event => {
-    if (event.error !== 'no-speech') {
-      console.warn('Speech recognition error:', event.error);
-      $('assistantOutput').textContent = `Mic note: ${event.error}`;
+    // Automatically resume recognizer on temporary abort or network glitch
+    if (wakeWordActive && !isAwaitingCommand && !isSpeaking) {
+      setTimeout(startBackgroundWakeListener, 400);
     }
   };
-
   recognizer.onend = () => {
     isListening = false;
-    if (silenceTimer) clearTimeout(silenceTimer);
-    $('voiceInputBtn').classList.remove('listening');
-    $('voiceBtnText').textContent = 'Voice';
-
-    const spoken = $('assistantCommand').value.trim();
-    if (spoken) {
-      // Auto-submit the full command directly into the async queue
-      $('assistantForm').dispatchEvent(new Event('submit', {cancelable: true}));
+    updateMicVisuals(false);
+    // Continuous background listening persists across all routes (/cockpit, /tasks, /ambient, etc.)
+    if (wakeWordActive && !isAwaitingCommand && !isSpeaking) {
+      setTimeout(startBackgroundWakeListener, 250);
     }
   };
 }
 
-$('speechLang').addEventListener('change', () => {
-  if (recognizer) {
-    recognizer.lang = $('speechLang').value;
+function updateMicVisuals(listening) {
+  $('orbCore').classList.toggle('listening', listening);
+  $('pushToTalkBtn').classList.toggle('listening', listening);
+  $('dockMicBtn').classList.toggle('listening', listening);
+  $('pushToTalkText').textContent = listening ? 'LISTENING…' : 'PUSH TO TALK';
+  $('voiceStatusBadge').textContent = listening ? 'LISTENING' : 'READY';
+}
+
+function submitSpokenCommand(explicitText) {
+  isAwaitingCommand = false;
+  if (silenceTimer) clearTimeout(silenceTimer);
+  updateMicVisuals(false);
+
+  // Immediately stop recognizer while command is submitted and being answered
+  try {
+    if (recognizer && isListening) recognizer.stop();
+  } catch (e) {}
+
+  const command = explicitText || $('voiceUserText').textContent.replace(/^"|"$/g, '').trim();
+  if (command && command !== 'Listening for command…') {
+    enqueueCommand(command);
   }
+
+  currentTranscript = '';
+  // Note: Recognizer will be resumed automatically AFTER speech synthesis finishes speaking
+}
+
+async function enqueueCommand(command) {
+  $('voiceAssistantText').textContent = `⚙️ Processing: "${command}"…`;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  try {
+    await fetch('/api/assistant/enqueue', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({command, timezone: tz})
+    });
+  } catch (e) {
+    $('voiceAssistantText').textContent = 'Network error enqueueing command';
+  }
+}
+
+/* Fallback text form inside Voice deck */
+$('assistantFallbackForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const val = $('typedCommandInput').value.trim();
+  if (!val) return;
+  $('voiceUserText').textContent = `"${val}"`;
+  enqueueCommand(val);
+  $('typedCommandInput').value = '';
 });
 
-$('voiceInputBtn').addEventListener('click', () => {
+/* Push to Talk Triggers */
+function triggerPushToTalk() {
   if (!recognizer) {
-    alert('Voice input is not supported in this browser. Please use Chrome, Edge, or a WebKit browser.');
+    alert('Voice recognition not supported in this browser. Use Chrome/WebKit on localhost.');
     return;
   }
-  if (isListening) {
-    recognizer.stop();
+  navigateTo('/voice');
+  if (isListening && isAwaitingCommand) {
+    submitSpokenCommand();
   } else {
-    try {
-      recognizer.lang = $('speechLang').value || 'en-IN';
-      recognizer.start();
-    } catch (e) {
-      console.warn('Cannot start recognition:', e);
-    }
+    isAwaitingCommand = true;
+    currentTranscript = '';
+    $('voiceUserText').textContent = 'Listening to your command…';
+    updateMicVisuals(true);
+    try { if (!isListening) recognizer.start(); } catch (e) {}
+  }
+}
+
+$('pushToTalkBtn').addEventListener('click', triggerPushToTalk);
+$('dockMicBtn').addEventListener('click', triggerPushToTalk);
+
+/* Wake Word Toggle */
+$('wakeWordToggleBtn').addEventListener('click', () => {
+  wakeWordActive = !wakeWordActive;
+  isAwaitingCommand = false;
+  $('wakeWordToggleBtn').textContent = wakeWordActive ? '🎙️ Wake: Desk' : 'Wake: Off';
+  $('wakeWordToggleBtn').style.color = wakeWordActive ? 'var(--cy)' : 'var(--text-sub)';
+  if (wakeWordActive) {
+    try { recognizer.start(); } catch (e) {}
+    showToast('Wake word enabled. Say "Hello Desk" anytime.');
+  } else {
+    try { recognizer.stop(); } catch (e) {}
+    showToast('Wake word paused.');
   }
 });
 
-document.querySelectorAll('[data-command]').forEach(button=>button.addEventListener('click',()=>{$('assistantCommand').value=button.dataset.command;$('assistantCommand').focus();}));
-let wakeLock=null;
-async function requestDisplayWakeLock(){try{if('wakeLock' in navigator && document.visibilityState==='visible')wakeLock=await navigator.wakeLock.request('screen');}catch(e){/* Requires a supported secure context; Android Stay awake remains the fallback. */}}
-$('fullscreenBtn').addEventListener('click',async()=>{try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen();$('fullscreenBtn').textContent='Exit fullscreen';}else{await document.exitFullscreen();$('fullscreenBtn').textContent='Fullscreen';}}catch(e){$('fullscreenBtn').textContent='Use kiosk mode';}});
-document.addEventListener('fullscreenchange',()=>{$('fullscreenBtn').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen';});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')requestDisplayWakeLock();});
-requestDisplayWakeLock();clockTick();setInterval(clockTick,250);update();renderFocus();
-$('clockPanel').addEventListener('click',()=>$('ambientBtn').click());
-</script></body></html>
+let speechActivated = false;
+
+function startBackgroundWakeListener() {
+  if (!recognizer || !wakeWordActive || isSpeaking) return;
+  try {
+    if (!isListening) recognizer.start();
+  } catch (err) {
+    // If browser threw InvalidStateError because it was transitioning, retry once shortly
+    setTimeout(() => {
+      try {
+        if (wakeWordActive && !isListening && !isSpeaking) recognizer.start();
+      } catch (e) {}
+    }, 300);
+  }
+}
+
+// User interaction gesture unlocks microphone permission in browser
+['click', 'touchstart', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    if (!speechActivated) {
+      speechActivated = true;
+      startBackgroundWakeListener();
+    }
+  }, { passive: true });
+});
+
+/* Fullscreen toggle */
+$('fullscreenToggleBtn').addEventListener('click', async () => {
+  try {
+    if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+    else await document.exitFullscreen();
+  } catch(e) {}
+});
+
+/* Initialize Route from initial URL */
+navigateTo(window.location.pathname, false);
+</script>
+</body>
+</html>

@@ -324,6 +324,9 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(500, {"error": "Could not load notifications"})
         elif path.startswith("/api/"):
             self.route_reminder_item("GET", path)
+        elif path in {"/", "/cockpit", "/tasks", "/reminders", "/voice", "/analytics", "/ambient"}:
+            self.path = "/index.html"
+            super().do_GET()
         else:
             super().do_GET()
 
@@ -512,8 +515,14 @@ class Handler(SimpleHTTPRequestHandler):
             return
         self.send_json(404, {"error": "Endpoint not found"})
 
-    def log_error(self, message):
-        print(f"[DeskOS] {message}", flush=True)
+    def log_error(self, fmt, *args):
+        if args:
+            try:
+                print(f"[DeskOS] {fmt % args}", flush=True)
+            except Exception:
+                print(f"[DeskOS] {fmt} {args}", flush=True)
+        else:
+            print(f"[DeskOS] {fmt}", flush=True)
 
     def do_HEAD(self):
         if self.path.split("?", 1)[0] == "/health":

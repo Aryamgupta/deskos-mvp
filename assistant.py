@@ -92,6 +92,13 @@ class AssistantRouter:
         params = result.get("parameters", {})
         reply = result.get("reply", "")
 
+        # Fallback check for ambient/rest phrases in case Gemini chose 'reply'
+        norm_cmd = command.lower()
+        if action == "reply" and re.search(r"\b(rest(\s+for\s+the\s+day)?|good\s*night|sleep(\s+mode)?|ambient(\s+mode|\s+clock)?)\b", norm_cmd):
+            action = "set_ambient_mode"
+            if not reply:
+                reply = "Rest well for the day! Switching to ambient mode."
+
         # Execute safe action
         if action == "create_reminder":
             title = str(params.get("title", "")).strip()
@@ -153,9 +160,15 @@ class AssistantRouter:
         elif action == "list_tasks":
             tasks = self.reminder_store.list_tasks(include_completed=False)
             if not tasks:
-                return self._result(True, "You have no pending tasks right now. Great job!", tool="list_tasks", data={"tasks": []})
-            summary = ", ".join(f"'{t['title']}'" for t in tasks[:5])
-            msg = reply or f"You have {len(tasks)} pending task(s): {summary}."
+                return self._result(True, "You have no pending tasks right now. You are all caught up!", tool="list_tasks", data={"tasks": []})
+            
+            # Format clean natural speech dictating each task
+            task_list_str = "; ".join(f"{i+1}. {t['title']} ({t['priority']} priority)" for i, t in enumerate(tasks))
+            # If Gemini gave a generic placeholder like "fetching", override with natural dictation
+            if not reply or "fetching" in reply.lower() or "checking" in reply.lower():
+                msg = f"You have {len(tasks)} pending task{'s' if len(tasks) > 1 else ''}: {task_list_str}."
+            else:
+                msg = reply
             return self._result(True, msg, tool="list_tasks", data={"tasks": tasks})
 
         elif action == "complete_task":
@@ -176,6 +189,20 @@ class AssistantRouter:
             target = matching[0]
             self.reminder_store.complete_task(target["id"])
             return self._result(True, reply or f"Completed task: '{target['title']}'!", tool="complete_task", data={"task": target})
+
+        elif action == "start_timer" or action == "set_focus_mode":
+            minutes = params.get("minutes", 25)
+            try:
+                minutes = int(minutes)
+            except Exception:
+                minutes = 25
+            action_name = "Focus session" if action == "set_focus_mode" else "Timer"
+            msg = reply or f"{action_name} started for {minutes} minutes."
+            return self._result(True, msg, tool="start_timer", data={"minutes": minutes, "mode": "focus"})
+
+        elif action == "set_ambient_mode":
+            msg = reply or "Rest well for the day! Switching to ambient mode."
+            return self._result(True, msg, tool="set_ambient_mode", data={"mode": "ambient"})
 
         elif action == "desk_analytics":
             analytics = self.reminder_store.get_desk_analytics()
