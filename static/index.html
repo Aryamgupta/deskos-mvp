@@ -121,7 +121,7 @@ body{background:radial-gradient(1100px 650px at 50% 28%,#0f1a26,#04060a 72%);bac
 <section class="bottom"><article class="panel"><div class="k">Developer environment · Node.js &amp; Bun</div><div class="sub" style="margin-top:4px">Detected processes (not yet health checks)</div><div class="runtime-list" id="runtimes"><span class="chip empty">Waiting for system status</span></div></article>
 <article class="panel"><div class="k">Focus session · 25 min</div><div class="focus" style="margin-top:6px"><div><div class="focus-time" id="focusTime">25:00</div><div class="sub" id="focusLabel">Ready when you are</div></div><div style="display:flex;gap:6px"><button class="btn" id="focusBtn">Start</button><button class="btn" id="resetBtn">Reset</button></div></div></article></section>
 <section class="reminders panel" id="reminderPanel"><div class="reminder-head"><div><div class="k">Local reminders</div><div class="sub" id="reminderState" style="margin-top:4px">Saved on this DeskOS host · delivery runs while the service is on</div></div></div><form class="reminder-form" id="reminderForm"><input id="reminderTitle" name="title" maxlength="160" placeholder="What should I remind you?" required><input id="reminderDue" name="due_at" type="datetime-local" required><select id="reminderRecurrence" name="recurrence" aria-label="Repeat"><option value="none">One time</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select><button id="reminderSubmit" type="submit">Add reminder</button><button id="reminderCancelEdit" type="button" hidden>Cancel edit</button></form><div class="reminder-list" id="reminderList" aria-live="polite"><div class="reminder-empty">Loading reminders…</div></div></section>
-<section class="assistant panel" id="assistantPanel"><div class="k">Local assistant · text commands</div><div class="sub" style="margin-top:4px">Deterministic commands run locally. Microphone and speech recognition are not enabled in this version.</div><form class="assistant-form" id="assistantForm"><input id="assistantCommand" maxlength="500" autocomplete="off" placeholder="Try: remind me to stretch in 10 minutes" required><button id="assistantSubmit" type="submit">Ask DeskOS</button></form><div class="assistant-examples" aria-label="Example commands"><button class="assistant-example" type="button" data-command="What time is it?">What time is it?</button><button class="assistant-example" type="button" data-command="How is my laptop doing?">Laptop status</button><button class="assistant-example" type="button" data-command="Show my reminders">Show reminders</button></div><div class="assistant-output" id="assistantOutput" role="status" aria-live="polite">Commands are allowlisted; DeskOS cannot run arbitrary shell commands.</div></section>
+<section class="assistant panel" id="assistantPanel"><div class="k">DeskOS Assistant · Natural AI Companion</div><div class="sub" style="margin-top:4px">Powered by Gemini with smart context and local fallback. Ask naturally to set reminders, check system health, or answer questions.</div><form class="assistant-form" id="assistantForm"><input id="assistantCommand" maxlength="1000" autocomplete="off" placeholder="e.g. Set a reminder to call Rishabh at 3pm today" required><button id="assistantSubmit" type="submit">Ask DeskOS</button></form><div class="assistant-examples" aria-label="Example commands"><button class="assistant-example" type="button" data-command="Set a reminder for calling Rishabh at 3pm today">Remind to call Rishabh</button><button class="assistant-example" type="button" data-command="How is my laptop doing?">Laptop status</button><button class="assistant-example" type="button" data-command="What are my reminders for today?">Show reminders</button></div><div class="assistant-output" id="assistantOutput" role="status" aria-live="polite">Ready for your natural language commands.</div></section>
 <dialog class="reminder-dialog" id="reminderDialog"><h2>DeskOS reminder</h2><p id="reminderDialogText"></p><button id="ackReminder" type="button">Acknowledge</button></dialog>
 <footer class="footer"><span id="hostSub">DeskOS will connect over your local network.</span><span id="updated">Waiting for first update</span></footer>
 </main>
@@ -236,7 +236,37 @@ $('reminderList').addEventListener('click',async event=>{const button=event.targ
 $('ackReminder').addEventListener('click',async()=>{if(!pendingReminderId){$('reminderDialog').close();return;}const id=pendingReminderId;$('ackReminder').disabled=true;try{await reminderRequest(`/api/notifications/${encodeURIComponent(id)}/ack`,{method:'POST'});pendingReminderId=null;$('reminderDialog').close();await refreshReminderNotifications();await refreshReminders();}catch(error){if(error.status===404){pendingReminderId=null;$('reminderDialog').close();}else{$('reminderDialogText').textContent=`Could not acknowledge yet: ${error.message}`;}}finally{$('ackReminder').disabled=false;}});
 $('reminderDialog').addEventListener('cancel',event=>event.preventDefault());
 refreshReminders();refreshReminderNotifications();setInterval(refreshReminders,15000);setInterval(refreshReminderNotifications,5000);
-$('assistantForm').addEventListener('submit',async event=>{event.preventDefault();const command=$('assistantCommand').value.trim();if(!command)return;$('assistantSubmit').disabled=true;$('assistantOutput').textContent='Working locally…';try{let result=await reminderRequest('/api/assistant/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command})});if(result.confirmation_required&&window.confirm(result.message)){result=await reminderRequest('/api/assistant/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command,confirm:true})});}$('assistantOutput').textContent=result.message||'DeskOS could not complete that command.';if(result.ok&&result.tool==='create_reminder')await refreshReminders();}catch(error){$('assistantOutput').textContent=error.message;}finally{$('assistantSubmit').disabled=false;}});
+$('assistantForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const command=$('assistantCommand').value.trim();
+  if(!command)return;
+  $('assistantSubmit').disabled=true;
+  $('assistantOutput').textContent='Thinking with DeskOS…';
+  const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
+  try{
+    let result=await reminderRequest('/api/assistant/command',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({command,timezone:tz})
+    });
+    if(result.confirmation_required&&window.confirm(result.message)){
+      result=await reminderRequest('/api/assistant/command',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({command,confirm:true,timezone:tz})
+      });
+    }
+    $('assistantOutput').textContent=result.message||'DeskOS could not complete that command.';
+    if(result.ok&&['create_reminder','cancel_reminder'].includes(result.tool)){
+      await refreshReminders();
+    }
+    $('assistantCommand').value='';
+  }catch(error){
+    $('assistantOutput').textContent=error.message;
+  }finally{
+    $('assistantSubmit').disabled=false;
+  }
+});
 document.querySelectorAll('[data-command]').forEach(button=>button.addEventListener('click',()=>{$('assistantCommand').value=button.dataset.command;$('assistantCommand').focus();}));
 let wakeLock=null;
 async function requestDisplayWakeLock(){try{if('wakeLock' in navigator && document.visibilityState==='visible')wakeLock=await navigator.wakeLock.request('screen');}catch(e){/* Requires a supported secure context; Android Stay awake remains the fallback. */}}

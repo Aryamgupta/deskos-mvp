@@ -9,6 +9,7 @@ import psutil
 import sqlite3
 
 from assistant import AssistantRouter
+from gemini_adapter import GeminiAdapter
 from reminder_store import ReminderStore
 
 ROOT = Path(__file__).resolve().parent
@@ -17,6 +18,7 @@ STARTED = time.time()
 CACHE_LOCK = Lock()
 _PROCESS_CACHE = {"at": 0.0, "items": []}
 _TEMP_CACHE = {"at": 0.0, "items": []}
+_GEMINI_ADAPTER = GeminiAdapter.from_environment()
 
 # Prime psutil's CPU and network counters for meaningful subsequent readings.
 psutil.cpu_percent(interval=None)
@@ -190,13 +192,18 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             try:
                 payload = self.read_json()
-                if set(payload) - {"command", "confirm"}:
-                    raise ValueError("Only command and confirm fields are accepted")
+                if set(payload) - {"command", "confirm", "timezone"}:
+                    raise ValueError("Only command, confirm, and timezone fields are accepted")
                 confirm = payload.get("confirm", False)
                 if not isinstance(confirm, bool):
                     raise ValueError("confirm must be a boolean")
-                router = AssistantRouter(self.reminder_store, collect_status)
-                self.send_json(200, router.handle(payload.get("command"), confirm))
+                timezone_name = payload.get("timezone")
+                # Reload adapter if environment changed
+                global _GEMINI_ADAPTER
+                if _GEMINI_ADAPTER is None:
+                    _GEMINI_ADAPTER = GeminiAdapter.from_environment()
+                router = AssistantRouter(self.reminder_store, collect_status, gemini_adapter=_GEMINI_ADAPTER)
+                self.send_json(200, router.handle(payload.get("command"), confirm, timezone_name=timezone_name))
             except (ValueError, TypeError, json.JSONDecodeError) as exc:
                 self.send_json(400, {"error": str(exc)})
             except sqlite3.Error:
@@ -330,7 +337,13 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     host = os.environ.get("DESKOS_HOST", "0.0.0.0")
     port = int(os.environ.get("DESKOS_PORT", "8765"))
-    data_dir = Path(os.environ.get("DESKOS_DATA_DIR", str(Path.home() / ".local/share/deskos"))).expanduser()
+    default_data_dir = ROOT / "data"
+    data_dir_env = os.environ.get("DESKOS_DATA_DIR")
+    if data_dir_env:
+        data_dir = Path(data_dir_env).expanduser()
+    else:
+        # Prefer workspace local data directory during laptop development
+        data_dir = default_data_dir
     data_dir.mkdir(parents=True, exist_ok=True)
     Handler.reminder_store = ReminderStore(data_dir / "deskos.sqlite3")
     print(f"DeskOS is starting on http://{host}:{port}")
