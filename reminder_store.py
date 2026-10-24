@@ -125,6 +125,25 @@ class ReminderStore:
                 );
                 CREATE INDEX IF NOT EXISTS notifications_pending_idx
                     ON notifications(acknowledged_at, created_at);
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 200),
+                    category TEXT NOT NULL DEFAULT 'general',
+                    priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low', 'normal', 'high')),
+                    due_date TEXT,
+                    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'cancelled')),
+                    created_at TEXT NOT NULL,
+                    completed_at TEXT
+                );
+                CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks(status, created_at);
+                CREATE TABLE IF NOT EXISTS analytics_events (
+                    id TEXT PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    value_num REAL DEFAULT 0,
+                    metadata_json TEXT,
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS analytics_type_idx ON analytics_events(event_type, created_at);
                 """
             )
 
@@ -266,3 +285,98 @@ class ReminderStore:
             )
             exists = connection.execute("SELECT 1 FROM notifications WHERE id = ?", (notification_id,)).fetchone()
         return exists is not None
+
+    # --- Task Management Methods ---
+
+    def create_task(self, title: str, category: str = "general", priority: str = "normal", due_date: str | None = None) -> dict[str, Any]:
+        if not isinstance(title, str) or not title.strip() or len(title.strip()) > 200:
+            raise ValueError("title must contain 1 to 200 characters")
+        if priority not in {"low", "normal", "high"}:
+            priority = "normal"
+        task_id = str(uuid4())
+        now_text = utc_string(datetime.now(UTC))
+        values = (task_id, title.strip(), category.strip(), priority, due_date, "pending", now_text)
+        with self.connection() as connection:
+            connection.execute(
+                """INSERT INTO tasks (id, title, category, priority, due_date, status, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                values,
+            )
+            row = connection.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        return dict(row)
+
+    def list_tasks(self, include_completed: bool = False) -> list[dict[str, Any]]:
+        query = "SELECT * FROM tasks"
+        if not include_completed:
+            query += " WHERE status = 'pending'"
+        query += " ORDER BY CASE priority WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, created_at DESC"
+        with self.connection() as connection:
+            rows = connection.execute(query).fetchall()
+        return [dict(row) for row in rows]
+
+    def complete_task(self, task_id: str) -> bool:
+        now_text = utc_string(datetime.now(UTC))
+        with self.connection() as connection:
+            connection.execute(
+                "UPDATE tasks SET status = 'completed', completed_at = ? WHERE id = ? AND status = 'pending'",
+                (now_text, task_id),
+            )
+            exists = connection.execute("SELECT 1 FROM tasks WHERE id = ? AND status = 'completed'", (task_id,)).fetchone()
+            if exists:
+                # Log analytics event for completed task
+                connection.execute(
+                    "INSERT INTO analytics_events (id, event_type, value_num, created_at) VALUES (?, 'task_completed', 1, ?)",
+                    (str(uuid4()), now_text),
+                )
+        return exists is not None
+
+    def delete_task(self, task_id: str) -> bool:
+        with self.connection() as connection:
+            cursor = connection.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+        return cursor.rowcount > 0
+
+    # --- Desk Analytics Methods ---
+
+    def log_analytics_event(self, event_type: str, value_num: float = 0.0, metadata_json: str | None = None) -> None:
+        now_text = utc_string(datetime.now(UTC))
+        with self.connection() as connection:
+            connection.execute(
+                "INSERT INTO analytics_events (id, event_type, value_num, metadata_json, created_at) VALUES (?, ?, ?, ?, ?)",
+                (str(uuid4()), event_type, value_num, metadata_json, now_text),
+            )
+
+    def get_desk_analytics(self) -> dict[str, Any]:
+        """Aggregate today's analytics and lifetime task metrics."""
+        today_prefix = datetime.now(UTC).strftime("%Y-%m-%d")
+        with self.connection() as connection:
+            # Tasks completed today
+            tasks_today = connection.execute(
+                "SELECT COUNT(*) as c FROM tasks WHERE status = 'completed' AND completed_at LIKE ?",
+                (f"{today_prefix}%",),
+            ).fetchone()["c"]
+
+            # Pending tasks
+            pending_tasks = connection.execute(
+                "SELECT COUNT(*) as c FROM tasks WHERE status = 'pending'"
+            ).fetchone()["c"]
+
+            # Focus sessions completed today
+            focus_events = connection.execute(
+                "SELECT SUM(value_num) as total_min, COUNT(*) as sessions FROM analytics_events WHERE event_type = 'focus_session' AND created_at LIKE ?",
+                (f"{today_prefix}%",),
+            ).fetchone()
+            focus_minutes = focus_events["total_min"] or 0
+            focus_sessions = focus_events["sessions"] or 0
+
+            # Total active reminders
+            active_reminders = connection.execute(
+                "SELECT COUNT(*) as c FROM reminders WHERE status = 'active'"
+            ).fetchone()["c"]
+
+        return {
+            "tasks_completed_today": tasks_today,
+            "tasks_pending": pending_tasks,
+            "focus_minutes_today": round(focus_minutes),
+            "focus_sessions_today": focus_sessions,
+            "active_reminders": active_reminders,
+        }

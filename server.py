@@ -288,50 +288,23 @@ class Handler(SimpleHTTPRequestHandler):
                     self.send_json(200, collect_status())
             except Exception as exc:
                 self.send_json(500, {"error": "Could not collect system status", "detail": str(exc)[:160]})
-        elif path == "/api/assistant/enqueue":
+        elif path == "/api/tasks":
+            if not self.require_reminder_store():
+                return
+            include_completed = urlsplit(self.path).query == "all=1"
+            try:
+                self.send_json(200, {"tasks": self.reminder_store.list_tasks(include_completed)})
+            except sqlite3.Error:
+                self.log_error("Could not list tasks")
+                self.send_json(500, {"error": "Could not load tasks"})
+        elif path == "/api/analytics":
             if not self.require_reminder_store():
                 return
             try:
-                payload = self.read_json()
-                if set(payload) - {"command", "confirm", "timezone"}:
-                    raise ValueError("Only command, confirm, and timezone fields are accepted")
-                command = payload.get("command")
-                if not isinstance(command, str) or not command.strip():
-                    raise ValueError("command must be a non-empty string")
-                confirm = payload.get("confirm", False)
-                if not isinstance(confirm, bool):
-                    raise ValueError("confirm must be a boolean")
-                timezone_name = payload.get("timezone")
-
-                task_id = str(uuid4())
-                task_data = {
-                    "id": task_id,
-                    "command": command.strip(),
-                    "confirm": confirm,
-                    "timezone": timezone_name,
-                    "status": "queued",
-                    "queued_at": time.time(),
-                }
-                with _TASK_HISTORY_LOCK:
-                    _TASK_HISTORY[task_id] = task_data
-                _ASSISTANT_QUEUE.put(task_data)
-
-                # Broadcast queue update event
-                _BROADCASTER.broadcast("task_queued", {
-                    "task_id": task_id,
-                    "command": command.strip(),
-                    "queue_size": _ASSISTANT_QUEUE.qsize(),
-                })
-
-                # Return 202 Accepted immediately
-                self.send_json(202, {
-                    "ok": True,
-                    "task_id": task_id,
-                    "status": "queued",
-                    "message": f"Command enqueued for processing: '{command.strip()}'",
-                })
-            except (ValueError, TypeError, json.JSONDecodeError) as exc:
-                self.send_json(400, {"error": str(exc)})
+                self.send_json(200, self.reminder_store.get_desk_analytics())
+            except sqlite3.Error:
+                self.log_error("Could not get analytics")
+                self.send_json(500, {"error": "Could not load analytics"})
         elif path == "/api/reminders":
             if not self.require_reminder_store():
                 return
@@ -425,6 +398,23 @@ class Handler(SimpleHTTPRequestHandler):
                 })
             except (ValueError, TypeError, json.JSONDecodeError) as exc:
                 self.send_json(400, {"error": str(exc)})
+        elif path == "/api/tasks":
+            if not self.require_reminder_store():
+                return
+            include_completed = urlsplit(self.path).query == "all=1"
+            try:
+                self.send_json(200, {"tasks": self.reminder_store.list_tasks(include_completed)})
+            except sqlite3.Error:
+                self.log_error("Could not list tasks")
+                self.send_json(500, {"error": "Could not load tasks"})
+        elif path == "/api/analytics":
+            if not self.require_reminder_store():
+                return
+            try:
+                self.send_json(200, self.reminder_store.get_desk_analytics())
+            except sqlite3.Error:
+                self.log_error("Could not get analytics")
+                self.send_json(500, {"error": "Could not load analytics"})
         elif path == "/api/reminders":
             if not self.require_reminder_store():
                 return

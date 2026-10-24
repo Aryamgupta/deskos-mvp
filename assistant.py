@@ -58,8 +58,10 @@ class AssistantRouter:
         
         # Build context for the LLM
         active_reminders = []
+        pending_tasks = []
         try:
             active_reminders = self.reminder_store.list_reminders(include_inactive=False)[:10]
+            pending_tasks = self.reminder_store.list_tasks(include_completed=False)[:10]
         except Exception:
             pass
 
@@ -81,6 +83,7 @@ class AssistantRouter:
             "timezone": tz_str,
             "system_status": sys_status,
             "active_reminders": active_reminders,
+            "pending_tasks": pending_tasks,
         }
 
         # Query Gemini
@@ -133,6 +136,61 @@ class AssistantRouter:
             items = ", ".join(f"'{r['title']}'" for r in reminders[:5])
             msg = reply or f"You have {len(reminders)} active reminder(s): {items}."
             return self._result(True, msg, tool="list_reminders", data={"reminders": reminders})
+
+        elif action == "create_task":
+            title = str(params.get("title", "")).strip()
+            category = str(params.get("category", "general")).strip()
+            priority = str(params.get("priority", "normal")).strip().lower()
+            due_date = params.get("due_date")
+            if not title:
+                return self._result(False, "Could not determine task title.")
+            try:
+                task = self.reminder_store.create_task(title, category=category, priority=priority, due_date=due_date)
+                return self._result(True, reply or f"Added task: '{title}'.", tool="create_task", data={"task": task})
+            except Exception as exc:
+                return self._result(False, f"Could not save task: {str(exc)}")
+
+        elif action == "list_tasks":
+            tasks = self.reminder_store.list_tasks(include_completed=False)
+            if not tasks:
+                return self._result(True, "You have no pending tasks right now. Great job!", tool="list_tasks", data={"tasks": []})
+            summary = ", ".join(f"'{t['title']}'" for t in tasks[:5])
+            msg = reply or f"You have {len(tasks)} pending task(s): {summary}."
+            return self._result(True, msg, tool="list_tasks", data={"tasks": tasks})
+
+        elif action == "complete_task":
+            target_title = str(params.get("title", "")).strip().lower()
+            task_id = str(params.get("task_id", "")).strip()
+
+            matching = []
+            for t in self.reminder_store.list_tasks(include_completed=False):
+                if task_id and t["id"] == task_id:
+                    matching = [t]
+                    break
+                if target_title and target_title in t["title"].lower():
+                    matching.append(t)
+
+            if not matching:
+                return self._result(False, f"No pending task matched '{target_title or task_id}'.")
+            
+            target = matching[0]
+            self.reminder_store.complete_task(target["id"])
+            return self._result(True, reply or f"Completed task: '{target['title']}'!", tool="complete_task", data={"task": target})
+
+        elif action == "desk_analytics":
+            analytics = self.reminder_store.get_desk_analytics()
+            raw_status = self.status_provider()
+            uptime_hrs = round(raw_status.get("uptime_seconds", 0) / 3600, 1)
+            cpu = raw_status.get("cpu_percent", 0)
+            mem = raw_status.get("memory", {}).get("percent", 0)
+            
+            data_payload = {**analytics, "uptime_hours": uptime_hrs, "cpu_percent": cpu, "memory_percent": mem}
+            fallback_reply = (
+                f"Today you have completed {analytics['tasks_completed_today']} task(s), "
+                f"logged {analytics['focus_minutes_today']} minutes of focus across {analytics['focus_sessions_today']} session(s). "
+                f"Your workstation has been active for {uptime_hrs} hours with CPU at {cpu}%."
+            )
+            return self._result(True, reply or fallback_reply, tool="desk_analytics", data=data_payload)
 
         elif action == "system_status":
             return self._result(True, reply or self._system_status()["message"], tool="get_system_status")
