@@ -299,6 +299,39 @@ class AssistantRouter:
             except Exception as exc:
                 return self._result(False, f"Failed to create calendar event: {str(exc)}")
 
+        elif action == "delete_calendar_event":
+            target_summary = str(params.get("summary", "")).strip().lower()
+            event_id = str(params.get("event_id", "")).strip()
+
+            if not is_authenticated():
+                return self._result(False, "Google Workspace is not connected.", tool="delete_calendar_event")
+
+            # Try to resolve event_id if not directly provided
+            if not event_id:
+                try:
+                    events = self.calendar_service.get_upcoming_events(days=7)
+                    for ev in events:
+                        if target_summary and target_summary in ev.get("summary", "").lower():
+                            event_id = ev.get("id")
+                            target_summary = ev.get("summary")
+                            break
+                except Exception:
+                    pass
+
+            if not event_id:
+                return self._result(False, f"Could not find a matching calendar event for '{target_summary}'.", tool="delete_calendar_event")
+
+            try:
+                self.calendar_service.delete_event(event_id)
+                return self._result(
+                    True,
+                    reply or f"Cancelled event '{target_summary}' from your Google Calendar.",
+                    tool="delete_calendar_event",
+                    data={"event_id": event_id},
+                )
+            except Exception as exc:
+                return self._result(False, f"Failed to delete calendar event: {str(exc)}")
+
         elif action == "list_emails":
             if not is_authenticated():
                 return self._result(False, "Google Workspace is not connected.", tool="list_emails")
@@ -350,6 +383,14 @@ class AssistantRouter:
             content = params.get("content")
             try:
                 doc = self.docs_service.create_daily_summary_doc(title=title, initial_content=content)
+                # Persist to local desk_docs table so it appears in the DeskOS UI
+                snippet = (content or "Created via DeskOS Voice Assistant")[:200]
+                self.reminder_store.save_doc(
+                    doc_id=doc.get("documentId"),
+                    title=doc.get("title"),
+                    doc_url=doc.get("url"),
+                    summary_snippet=snippet,
+                )
                 return self._result(
                     True,
                     reply or f"Created Google Document: '{doc['title']}'.",
@@ -358,6 +399,7 @@ class AssistantRouter:
                 )
             except Exception as exc:
                 return self._result(False, f"Could not create Google Doc: {str(exc)}")
+
 
 
         # Conversational reply or answer

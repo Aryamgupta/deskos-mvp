@@ -308,9 +308,29 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 from services.calendar_service import GoogleCalendarService
                 cal = GoogleCalendarService()
-                self.send_json(200, {"events": cal.get_today_events(), "connected": True})
+                days = 7 if urlsplit(self.path).query == "upcoming=1" else 1
+                events = cal.get_upcoming_events(days=days) if days > 1 else cal.get_today_events()
+                self.send_json(200, {"events": events, "connected": True})
             except Exception as exc:
                 self.send_json(500, {"error": str(exc), "connected": False})
+        elif path == "/api/gmail/unread":
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(200, {"emails": [], "connected": False})
+                return
+            try:
+                from services.gmail_service import GmailService
+                gmail = GmailService()
+                self.send_json(200, {"emails": gmail.get_unread_emails(max_results=8), "connected": True})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc), "connected": False})
+        elif path == "/api/docs":
+            if not self.require_reminder_store():
+                return
+            try:
+                self.send_json(200, {"docs": self.reminder_store.list_docs()})
+            except sqlite3.Error:
+                self.send_json(500, {"error": "Could not load documents"})
         elif path == "/api/analytics":
             if not self.require_reminder_store():
                 return
@@ -338,7 +358,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(500, {"error": "Could not load notifications"})
         elif path.startswith("/api/"):
             self.route_reminder_item("GET", path)
-        elif path in {"/", "/cockpit", "/tasks", "/reminders", "/voice", "/analytics", "/ambient"}:
+        elif path in {"/", "/cockpit", "/tasks", "/reminders", "/google", "/voice", "/analytics", "/ambient"}:
             self.path = "/index.html"
             super().do_GET()
         else:
@@ -435,9 +455,29 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 from services.calendar_service import GoogleCalendarService
                 cal = GoogleCalendarService()
-                self.send_json(200, {"events": cal.get_today_events(), "connected": True})
+                days = 7 if urlsplit(self.path).query == "upcoming=1" else 1
+                events = cal.get_upcoming_events(days=days) if days > 1 else cal.get_today_events()
+                self.send_json(200, {"events": events, "connected": True})
             except Exception as exc:
                 self.send_json(500, {"error": str(exc), "connected": False})
+        elif path == "/api/gmail/unread":
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(200, {"emails": [], "connected": False})
+                return
+            try:
+                from services.gmail_service import GmailService
+                gmail = GmailService()
+                self.send_json(200, {"emails": gmail.get_unread_emails(max_results=8), "connected": True})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc), "connected": False})
+        elif path == "/api/docs":
+            if not self.require_reminder_store():
+                return
+            try:
+                self.send_json(200, {"docs": self.reminder_store.list_docs()})
+            except sqlite3.Error:
+                self.send_json(500, {"error": "Could not load documents"})
         elif path == "/api/analytics":
             if not self.require_reminder_store():
                 return
@@ -472,7 +512,22 @@ class Handler(SimpleHTTPRequestHandler):
         self.route_reminder_item("PATCH", urlsplit(self.path).path)
 
     def do_DELETE(self):
-        self.route_reminder_item("DELETE", urlsplit(self.path).path)
+        path = urlsplit(self.path).path
+        if path.startswith("/api/calendar/events/"):
+            event_id = path[len("/api/calendar/events/"):]
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(401, {"error": "Google Workspace is not connected"})
+                return
+            try:
+                from services.calendar_service import GoogleCalendarService
+                cal = GoogleCalendarService()
+                cal.delete_event(event_id)
+                self.send_json(200, {"ok": True, "message": "Event deleted successfully", "event_id": event_id})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc)})
+            return
+        self.route_reminder_item("DELETE", path)
 
     def require_reminder_store(self):
         if self.reminder_store is None:

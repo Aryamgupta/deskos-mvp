@@ -42,7 +42,7 @@ You will receive:
 Rules for your response:
 You must reply with a valid JSON object matching this schema:
 {
-  "action": "create_reminder" | "cancel_reminder" | "list_reminders" | "create_task" | "list_tasks" | "complete_task" | "desk_analytics" | "system_status" | "start_timer" | "set_focus_mode" | "set_ambient_mode" | "list_calendar_events" | "create_calendar_event" | "list_emails" | "create_email_draft" | "create_doc_summary" | "reply",
+  "action": "create_reminder" | "cancel_reminder" | "list_reminders" | "create_task" | "list_tasks" | "complete_task" | "desk_analytics" | "system_status" | "start_timer" | "set_focus_mode" | "set_ambient_mode" | "list_calendar_events" | "create_calendar_event" | "delete_calendar_event" | "list_emails" | "create_email_draft" | "create_doc_summary" | "reply",
   "parameters": {
      // for "start_timer":
      //   "minutes": number (default 25 if unspecified)
@@ -62,6 +62,8 @@ You must reply with a valid JSON object matching this schema:
      //   "days": number (default 1 for today, 7 for week)
      // for "create_calendar_event":
      //   "summary": string, "start_iso": string, "duration_minutes": number, "description": string (optional)
+     // for "delete_calendar_event":
+     //   "summary": string or "event_id": string (match against upcoming_calendar_events if available)
      // for "list_emails":
      //   "query": string (default "is:unread in:inbox", or search keywords)
      // for "create_email_draft":
@@ -79,6 +81,8 @@ Important Instructions:
   * Google Calendar:
     - When user asks about meetings or schedule (e.g. "what meetings do I have today?", "aaj kya meeting hai", "what's on my calendar?"): choose action "list_calendar_events". If upcoming events are provided in current_context, dictate them clearly in `reply`.
     - When user asks to schedule or create a meeting (e.g. "schedule a meeting with team tomorrow at 4pm", "calendar pe event dalo"): choose action "create_calendar_event" with summary, start_iso, duration_minutes.
+    - When user asks to cancel or delete a meeting (e.g. "cancel the 4pm meeting", "delete the meeting with Johnny", "cancel my meeting"): match the meeting from `upcoming_calendar_events` and return action "delete_calendar_event" with "summary" or "event_id".
+
   * Gmail:
     - When user asks to check emails (e.g. "check my emails", "any new unread emails?", "koi nayi email aayi hai?"): choose action "list_emails".
     - When user asks to compose or draft an email: choose action "create_email_draft".

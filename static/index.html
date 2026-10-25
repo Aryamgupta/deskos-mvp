@@ -471,6 +471,70 @@ html,body{
   letter-spacing:.02em;
 }
 
+/* === DECK: GOOGLE WORKSPACE (/google) === */
+#deck-google{
+  grid-template-columns:1.2fr 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+.google-pod{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.google-scroll-area{
+  flex:1;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding-right:4px;
+}
+.google-scroll-area::-webkit-scrollbar{width:4px}
+.google-scroll-area::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:4px}
+.google-card-item{
+  background:rgba(5,9,15,.7);
+  border:1px solid var(--card-border-subtle);
+  border-radius:12px;
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  transition:border-color .15s;
+}
+.google-card-item:hover{border-color:var(--cy)}
+.google-card-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.google-card-title{
+  font-size:12px;
+  font-weight:600;
+  color:var(--text-main);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.google-card-meta{
+  font-size:10px;
+  color:var(--cy);
+  font-weight:500;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.google-card-snippet{
+  font-size:11px;
+  color:var(--text-sub);
+  line-height:1.35;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
 /* === DECK: REMINDERS (/reminders) === */
 #deck-reminders{
   grid-template-columns:1.5fr 1fr;
@@ -838,7 +902,7 @@ html,body{
           </div>
         </div>
 
-        <div class="car-quick-grid">
+        <div class="car-quick-grid" style="grid-template-columns:1fr 1fr 1fr">
           <div class="car-quick-tile" id="tileQuickRemind">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <div class="title">REMINDERS</div>
@@ -846,8 +910,13 @@ html,body{
           </div>
           <div class="car-quick-tile" id="tileQuickTasks">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            <div class="title">TODAY'S TASKS</div>
+            <div class="title">TASKS</div>
             <div class="sub" id="quickTaskCount">0 Pending</div>
+          </div>
+          <div class="car-quick-tile" id="tileQuickGoogle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div class="title">GOOGLE</div>
+            <div class="sub" id="quickGoogleSub">Workspace</div>
           </div>
         </div>
       </article>
@@ -890,6 +959,31 @@ html,body{
           • <i>"Hello Desk, add a task to test car console"</i><br>
           • <i>"Hello Desk, what are my tasks for today?"</i><br>
           • <i>"Hello Desk, mark task completed"</i>
+        </div>
+      </article>
+    </section>
+
+    <!-- DECK: GOOGLE WORKSPACE (/google) -->
+    <section class="deck" id="deck-google">
+      <!-- Left Pod: Google Calendar Events -->
+      <article class="cluster-pod google-pod">
+        <div class="task-header-row">
+          <div class="pod-title" style="margin-bottom:0">GOOGLE CALENDAR <span id="googleCalCount">LIVE</span></div>
+          <button class="btn-top" id="refreshCalendarBtn" type="button">↻ Refresh</button>
+        </div>
+        <div class="google-scroll-area" id="googleCalendarList">
+          <div style="color:var(--text-dim);font-size:12px;padding:8px">Loading Calendar events…</div>
+        </div>
+      </article>
+
+      <!-- Right Pod: DeskOS Generated Google Docs -->
+      <article class="cluster-pod google-pod">
+        <div class="task-header-row">
+          <div class="pod-title" style="margin-bottom:0">DESKOS DOCS <span id="googleDocsCount">0 DOCS</span></div>
+          <button class="btn-top" id="refreshDocsBtn" type="button">↻ Refresh</button>
+        </div>
+        <div class="google-scroll-area" id="googleDocsList">
+          <div style="color:var(--text-dim);font-size:12px;padding:8px">Loading DeskOS Google Docs…</div>
         </div>
       </article>
     </section>
@@ -1054,7 +1148,12 @@ html,body{
       <span>TASKS</span>
     </button>
 
-    <!-- Perfectly Centered Tactile TALK Button (3rd of 5 items) -->
+    <button class="dock-btn" data-route="/google" data-deck="deck-google" type="button" title="Google Workspace (Calendar & Gmail)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>GOOGLE</span>
+    </button>
+
+    <!-- Perfectly Centered Tactile TALK Button -->
     <button class="dock-btn mic-dock-btn" id="dockMicBtn" type="button" title="Push to talk / Voice Assistant">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2.3"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       <span style="font-size:7px;margin-top:1px">TALK</span>
@@ -1087,6 +1186,7 @@ const ROUTES = {
   '/': 'deck-cockpit',
   '/cockpit': 'deck-cockpit',
   '/tasks': 'deck-tasks',
+  '/google': 'deck-google',
   '/reminders': 'deck-reminders',
   '/voice': 'deck-voice',
   '/analytics': 'deck-analytics',
@@ -1124,6 +1224,7 @@ function navigateTo(path, push = true) {
 
   // Load data for specific decks
   if (deckId === 'deck-tasks') refreshTasks();
+  if (deckId === 'deck-google') refreshGoogleWorkspace();
   if (deckId === 'deck-reminders') refreshReminders();
   if (deckId === 'deck-analytics') refreshAnalytics();
 }
@@ -1140,6 +1241,9 @@ document.querySelectorAll('.dock-btn[data-route]').forEach(btn => {
 // Quick action tile navigation
 $('tileQuickTasks').addEventListener('click', () => navigateTo('/tasks'));
 $('tileQuickRemind').addEventListener('click', () => navigateTo('/reminders'));
+$('tileQuickGoogle').addEventListener('click', () => navigateTo('/google'));
+$('googleWorkspaceBadge').addEventListener('click', () => navigateTo('/google'));
+
 
 // Ambient toggle button in top bar
 $('ambientToggleBtn').addEventListener('click', () => {
@@ -1531,6 +1635,133 @@ $('reminderCreateForm').addEventListener('submit', async e => {
 });
 $('refreshRemindersBtn').addEventListener('click', refreshReminders);
 
+/* === GOOGLE WORKSPACE (CALENDAR & DESKOS DOCS) === */
+async function refreshGoogleWorkspace() {
+  await Promise.all([refreshCalendar(), refreshDocs()]);
+}
+
+async function refreshCalendar() {
+  const container = $('googleCalendarList');
+  const countBadge = $('googleCalCount');
+  try {
+    const res = await fetch('/api/calendar/events?upcoming=1', {cache: 'no-store'});
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    if (!data.connected) {
+      container.innerHTML = `
+        <div style="padding:16px;text-align:center;color:var(--text-sub)">
+          Google account not linked.<br>
+          <span style="font-size:11px;color:var(--text-dim)">Run <code>.venv/bin/python3 scripts/auth_google.py</code> to connect.</span>
+        </div>`;
+      if (countBadge) countBadge.textContent = 'OFFLINE';
+      return;
+    }
+    const events = data.events || [];
+    if (countBadge) countBadge.textContent = `${events.length} EVENTS`;
+    if ($('quickGoogleSub')) $('quickGoogleSub').textContent = `${events.length} Upcoming`;
+
+    if (!events.length) {
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:12px;text-align:center">No upcoming events scheduled. Your schedule is clear!</div>';
+      return;
+    }
+
+    container.innerHTML = events.map(ev => {
+      let timeStr = 'All-day';
+      if (ev.start && ev.start.includes('T')) {
+        const dt = new Date(ev.start);
+        timeStr = dt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' · ' + dt.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+      } else if (ev.start) {
+        timeStr = ev.start;
+      }
+      return `
+        <div class="google-card-item">
+          <div class="google-card-header">
+            <span class="google-card-title">${esc(ev.summary || 'Untitled Event')}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="task-badge normal" style="font-size:8.5px">CALENDAR</span>
+              <button class="task-btn-check" style="color:var(--red);border-color:rgba(255,92,92,.3);background:rgba(255,92,92,.1);padding:3px 8px;font-size:9.5px" onclick="cancelCalendarEvent('${esc(ev.id)}', '${esc(ev.summary || 'Meeting')}')">Cancel</button>
+            </div>
+          </div>
+          <div class="google-card-meta">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>${esc(timeStr)}</span>
+          </div>
+          ${ev.description ? `<div class="google-card-snippet">${esc(ev.description)}</div>` : ''}
+          ${ev.htmlLink ? `<a href="${esc(ev.htmlLink)}" target="_blank" style="font-size:10px;color:var(--cy);margin-top:2px;text-decoration:none">Open in Google Calendar ↗</a>` : ''}
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = '<div style="color:var(--red);font-size:11px;padding:8px">Failed to load calendar events.</div>';
+  }
+}
+
+async function cancelCalendarEvent(eventId, title) {
+  if (!confirm(`Cancel meeting "${title}" from your Google Calendar?`)) return;
+  try {
+    const res = await fetch(`/api/calendar/events/${encodeURIComponent(eventId)}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      showToast(`Cancelled meeting: "${title}"`);
+      refreshCalendar();
+    } else {
+      const err = await res.json();
+      alert(`Could not cancel meeting: ${err.error || 'Server error'}`);
+    }
+  } catch (e) {
+    alert('Failed to connect to calendar service');
+  }
+}
+
+async function refreshDocs() {
+  const container = $('googleDocsList');
+  const countBadge = $('googleDocsCount');
+  try {
+    const res = await fetch('/api/docs', {cache: 'no-store'});
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const docs = data.docs || [];
+    if (countBadge) countBadge.textContent = `${docs.length} DOCS`;
+
+    if (!docs.length) {
+      container.innerHTML = `
+        <div style="color:var(--text-dim);font-size:12px;padding:16px;text-align:center;line-height:1.6">
+          No DeskOS documents generated yet.<br>
+          <span style="font-size:11px;color:var(--text-sub)">Say <i>"Hello Desk, create a daily summary doc"</i> to generate one!</span>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = docs.map(d => {
+      const createdDate = new Date(d.created_at);
+      const timeStr = createdDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' · ' + createdDate.toLocaleDateString([], {month:'short', day:'numeric'});
+      return `
+        <div class="google-card-item">
+          <div class="google-card-header">
+            <span class="google-card-title">${esc(d.title || 'DeskOS Doc')}</span>
+            <span class="task-badge normal" style="font-size:8px;background:rgba(63,230,148,.1);color:var(--green);border-color:rgba(63,230,148,.3)">DOC</span>
+          </div>
+          <div class="google-card-meta" style="color:var(--text-dim)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span>Created ${esc(timeStr)}</span>
+          </div>
+          ${d.summary_snippet ? `<div class="google-card-snippet">${esc(d.summary_snippet)}</div>` : ''}
+          <a href="${esc(d.doc_url)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--cy);margin-top:4px;text-decoration:none">
+            <span>Open in Google Docs</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </a>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = '<div style="color:var(--red);font-size:11px;padding:8px">Failed to load DeskOS documents.</div>';
+  }
+}
+
+$('refreshCalendarBtn').addEventListener('click', refreshCalendar);
+$('refreshDocsBtn').addEventListener('click', refreshDocs);
+
 /* === DESK ANALYTICS (PRODUCTIVITY & HARDWARE) === */
 async function refreshAnalytics() {
   try {
@@ -1709,9 +1940,10 @@ if (SpeechRec) {
         }
 
         if (silenceTimer) clearTimeout(silenceTimer);
+        // Generous silence threshold (3.5s) to allow natural pauses when speaking lengthy sentences
         silenceTimer = setTimeout(() => {
           if (isListening && isAwaitingCommand) submitSpokenCommand();
-        }, 2500);
+        }, 3500);
       }
       return;
     }
@@ -1719,9 +1951,10 @@ if (SpeechRec) {
     if (isAwaitingCommand) {
       $('voiceUserText').textContent = `"${fullText}"`;
       if (silenceTimer) clearTimeout(silenceTimer);
+      // Increased from 2.2s to 3.8s so user can speak lengthy commands without premature cut-offs
       silenceTimer = setTimeout(() => {
         if (isListening && isAwaitingCommand) submitSpokenCommand();
-      }, 2200);
+      }, 3800);
     }
   };
 
