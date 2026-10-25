@@ -1,485 +1,258 @@
-# DeskOS — Your Personal Workstation Dashboard
+# DeskOS v2 — Workstation Companion & Intelligent Desk Assistant
 
-A lightweight, self-hosted workstation dashboard that turns an old Android phone into a dedicated desk display for your laptop.
+[![Docker Stack](https://img.shields.io/badge/Docker-Compose%20v2-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Raspberry Pi](https://img.shields.io/badge/Hardware-Raspberry%20Pi%204-C51850?logo=raspberrypi&logoColor=white)](https://www.raspberrypi.org/)
+[![Nginx SSL](https://img.shields.io/badge/Security-Nginx%20HTTPS%20%2B%20SAN-009639?logo=nginx&logoColor=white)](https://nginx.org/)
+[![Google Gemini](https://img.shields.io/badge/AI-Gemini%20Flash%20Lite-8E75C2?logo=google&logoColor=white)](https://aistudio.google.com/)
+[![Google Workspace](https://img.shields.io/badge/Workspace-Calendar%20%2B%20Docs-4285F4?logo=google&logoColor=white)](https://workspace.google.com/)
 
-DeskOS runs on your Ubuntu laptop and serves a live dashboard over your local Wi-Fi. Open it on a phone, tablet, or another browser to see your workstation status, monitor system resources, manage focus sessions, and receive warning alerts.
-
-> **Built for:** Ubuntu/Linux + an Android phone such as the Realme C2  
-> **Architecture:** Python backend + HTML, CSS and JavaScript frontend  
-> **Deployment:** Local network, with optional systemd service
-
-## ✨ Features
-
-### 🕒 Digital desk clock
-- Large digital clock with the current date.
-- Responsive layout for desktop and mobile screens.
-- Ambient clock mode for a clean, minimal display.
-- Fullscreen support for a more dedicated desk-clock experience.
-
-### 📊 Live workstation monitoring
-Monitor your laptop's system status from your phone.
-
-- CPU utilization.
-- RAM utilization and usage details.
-- Disk usage and available storage.
-- Network download and upload activity.
-- Disk read/write activity.
-- System uptime.
-- Battery status when available.
-- CPU temperature only when a sensor has a recognizable CPU label; otherwise it is shown as unavailable.
-
-### ⚠️ Workstation alerts
-DeskOS checks system metrics and displays warnings when configured thresholds are reached.
-
-- Sustained high CPU usage.
-- Sustained high memory usage.
-- High reported system temperature.
-- Low available disk space.
-- Warning popups for newly active warning conditions, rather than every changed metric value.
-- Non-critical popups dismiss automatically after 10 seconds; critical warnings require manual acknowledgement.
-- Optional custom alert audio.
-- Browser-supported phone vibration for warnings.
-- Separate warning and critical alert presentation.
-
-**Note:** Audio and vibration depend on browser support, Android permissions, and page activity. A webpage cannot guarantee alerts when the browser is suspended or closed.
-
-### 💻 Developer environment
-- Detect running Node.js processes.
-- Detect running Bun processes.
-- Display detected process IDs.
-- Lightweight process monitoring rather than continuous intensive scanning.
-
-Process detection is informational; it does not currently establish whether an application or API endpoint is healthy.
-
-### ⏱️ Focus timer
-- 25-minute focus session.
-- Start and pause controls.
-- Reset functionality.
-- Remaining-time display.
-
-### 🤖 Deterministic local assistant (text MVP)
-- Handles local time, laptop/system status, and reminder list/create/cancel commands.
-- Uses a fixed intent router and explicit tool schemas; it has no model access or shell execution capability.
-- Cancellation asks for confirmation; ambiguous duplicate reminder titles are not cancelled.
-- Unknown or unsupported commands fail safely with examples.
-- This stage accepts typed commands only. Browser speech recognition is intentionally not enabled because it may rely on external services and cannot be assumed to work offline.
-
-### ⏰ Persistent local reminders
-- Create one-time, daily, or weekly reminders from the dashboard.
-- Store reminder schedules and pending notifications in a local SQLite database.
-- Edit, complete, or cancel active reminders.
-- Due notifications remain pending until acknowledged; the service dispatches them even when the browser is closed.
-- When a recurring reminder was missed during downtime, DeskOS delivers one catch-up notification and schedules its next future occurrence.
-- Recurring schedules follow the browser's IANA timezone and local wall-clock time.
-
-### 📱 Phone-friendly experience
-- Responsive dashboard for smaller screens.
-- Fullscreen mode.
-- Screen Wake Lock support where available.
-- Ambient clock mode when the laptop is unavailable.
-- Automatic connection-status updates.
-- Local-network access without requiring a cloud account.
-
-### ⚙️ Lightweight operation
-DeskOS is designed to reuse an existing laptop as the monitoring server and an old Android phone as the display. It avoids unnecessary cloud infrastructure and keeps monitoring work relatively infrequent.
-
-Actual resource usage depends on the hardware, operating system, and enabled monitoring features.
+A modern, containerized **Workstation Companion & Voice-Powered Desk Assistant**. DeskOS transforms any dedicated screen, tablet, or phone (such as a docked Realme C2 or iPad) into an autonomous desk HUD that continuously monitors your primary workstation laptop, organizes tasks, manages Google Calendar and Docs, and answers voice commands with zero cloud latency.
 
 ---
 
-## 🖥️ How it works
+## 🏗️ System Architecture
 
-```text
-┌─────────────────────────────┐
-│       Ubuntu Laptop         │
-│                             │
-│  Python monitoring server   │
-│  CPU / RAM / Disk / Network │
-│  Temperature / Processes    │
-└──────────────┬──────────────┘
-               │
-               │ Local Wi-Fi
-               │ HTTP / JSON
-               ▼
-┌─────────────────────────────┐
-│       Android Phone         │
-│         Realme C2           │
-│                             │
-│  Digital clock              │
-│  Live system dashboard      │
-│  Warning popups             │
-│  Sound and vibration        │
-│  Focus timer                │
-└─────────────────────────────┘
+DeskOS follows an asynchronous **Master-Agent Companion Architecture**:
+
 ```
-
-The laptop runs the backend and collects system metrics. The phone loads the dashboard and periodically requests updated information from the backend.
-
-DeskOS is intended for a trusted local network. The default HTTP setup does not provide encryption or authentication.
+ ┌────────────────────────────────────────┐       ┌──────────────────────────────────────────────────┐
+ │      WORKSTATION LAPTOP (Client)       │       │             DESK COMPANION (Host)                │
+ │       aryam-Vostro-3405 (Ubuntu)       │       │          Raspberry Pi 4 / Docker Host            │
+ │                                        │       │                                                  │
+ │  ┌──────────────────────────────────┐  │       │   ┌──────────────────────────────────────────┐   │
+ │  │      Telemetry Sidecar Agent     │  │ HTTPS │   │         Nginx Reverse Proxy (:443)       │   │
+ │  │        (systemd user daemon)     │──┼───────┼──>│       SSL SAN + HTTP/2 + SSE unbuffered  │   │
+ │  │   CPU, RAM, NVMe, Battery, Temp  │  │ PUSH  │   └────────────────────┬─────────────────────┘   │
+ │  └──────────────────────────────────┘  │       │                        │ :8765                   │
+ └────────────────────────────────────────┘       │   ┌────────────────────▼─────────────────────┐   │
+                                                  │   │         DeskOS Master Core Container     │   │
+                                                  │   │  • SSE Real-time Broadcaster             │   │
+                                                  │   │  • Zero-Trust 6-Digit Device PIN Gate    │   │
+ ┌────────────────────────────────────────┐       │   │  • Gemini Function Calling Engine        │   │
+ │         PHONE / TABLET DOCK            │       │   │  • Google Calendar & Docs Services       │   │
+ │        Realme C2 / Mobile Browser      │       │   │  • SQLite Task & Reminder Store          │   │
+ │                                        │       │   └──────────────────────────────────────────┘   │
+ │  ┌──────────────────────────────────┐  │       └──────────────────────────────────────────────────┘
+ │  │        DeskOS HTML5 HUD          │  │
+ │  │  • Real-time SSE Gauges          │  │
+ │  │  • Mobile Push-To-Talk (PTT)     │  │
+ │  │  • Hardware Alarm (my-alert.mp3) │<─┴─────── (Live SSE Telemetry + Voice Feedback)
+ │  └──────────────────────────────────┘
+ └────────────────────────────────────────┘
+```
 
 ---
 
-## 🧰 Technology stack
+## ✨ Core Capabilities
 
-| Technology | Purpose |
-|---|---|
-| Python | Backend server and system monitoring |
-| psutil | CPU, memory, disk, network and process information |
-| HTML | Dashboard structure |
-| CSS | Responsive styling and dark interface |
-| JavaScript | Clock, API polling, charts/meters, alerts and focus timer |
-| Web Audio API / HTML audio | Browser-based alert sound |
-| Vibration API | Phone vibration where supported |
-| systemd | Optional automatic server startup on Linux |
+### 1. 📊 Workstation Telemetry Companion
+* **Zero Container Distortion:** The Pi displays actual workstation metrics (`aryam-Vostro-3405`) pushed from your laptop sidecar agent, rather than the Pi's internal Docker stats.
+* **Full Hardware Telemetry:** CPU load, RAM allocation, NVMe read/write throughput, battery percentage, charging state, core thermals, and active development runtimes (Node, Bun, Docker, VS Code).
+* **Real-time Server-Sent Events (SSE):** Metric broadcasts arrive every 2–3 seconds over an unbuffered HTTP stream (`proxy_buffering off;`) with zero polling overhead.
 
----
+### 2. 🚨 Hardware Warning Thresholds & Audible Alarm
+* **Automatic Detection:** DeskOS analyzes incoming hardware counters:
+  * Sustained CPU $\ge 90\%$ (3 samples) $\rightarrow$ Warning / Critical if $\ge 96\%$
+  * Sustained RAM $\ge 90\%$ (3 samples) $\rightarrow$ Warning / Critical if $\ge 95\%$
+  * CPU Thermals $\ge 85^\circ\text{C}$ $\rightarrow$ Warning / Critical if $\ge 92^\circ\text{C}$
+  * Low Storage: $< 8\%$ free on primary disk.
+* **Audible Alarm:** Automatically plays `/sounds/my-alert.mp3` at full volume.
+* **Haptics & Visuals:** Displays pulsating amber/red alert banners and triggers mobile device vibration.
 
-## 📋 Requirements
+### 3. 🎙️ Voice Assistant & Smart Speech Engine
+* **Phonetic Wake Word:** Supports *"Hello Desk"*, *"Hey Desk"*, *"Ok Desk"*, and *"Desk"* with tactile audio feedback.
+* **Mobile Push-To-Talk (PTT) Mode:** Automatically detects mobile devices (such as Android / Realme C2) and disables continuous background microphone polling. This **completely eliminates the annoying repetitive Android OS mic chime loop** while preserving battery.
+* **Dual-Microphone Anti-Stutter Filter (`cleanDuplicateSpeech`):** Cleans and deduplicates transcript stutter caused by smartphone beamforming and noise-cancelling dual mics.
+* **Multilingual Recognition:** Supports `en-IN`, `hi-IN`, and `en-US` Speech Recognition.
 
-On the laptop:
+### 4. 📅 Google Workspace Integration
+* **Google Calendar:** Real-time agenda deck showing today's and upcoming meetings. Cancel meetings directly from the HUD or via voice (*"Cancel my meeting with Johnny"*).
+* **Google Docs:** Generates meeting briefs, task recaps, and notes directly to Google Drive via voice commands (*"Create a doc summarizing my daily standup"*).
+* **Token Persistence:** Seamless offline OAuth refresh token persistence in `data/token.json`.
 
-- Ubuntu or another compatible Linux distribution.
-- Python 3.
-- A working Wi-Fi or local network connection.
-- A modern browser on the phone.
-- Python dependencies listed in `requirements.txt`.
-
-On the phone:
-
-- Android with a compatible browser.
-- Access to the same local network as the laptop.
-- Sound and vibration enabled if you want warning notifications.
-
----
-
-## 🚀 Getting started
-
-### 1. Clone the repository
-
-After uploading DeskOS to GitHub, clone your repository:
-
-```bash
-git clone https://github.com/YOUR_USERNAME/deskos.git
-cd deskos
-```
-
-Replace `YOUR_USERNAME/deskos` with your actual GitHub repository path.
-
-### 2. Create a virtual environment
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-If Python's virtual-environment module is missing on Ubuntu, install it:
-
-```bash
-sudo apt update
-sudo apt install python3-venv
-```
-
-### 3. Install dependencies
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-### 4. Start the server
-
-For a project whose backend entry point is `server.py`:
-
-```bash
-python server.py
-```
-
-The server defaults to port `8765`. To use port `8769` (as in the systemd example below), set the listening address and port explicitly:
-
-```bash
-DESKOS_HOST=0.0.0.0 DESKOS_PORT=8769 python server.py
-```
-
-Keep the terminal open while testing.
-
-### 5. Open DeskOS on your phone
-
-Find your laptop's local IP address:
-
-```bash
-hostname -I
-```
-
-For example, if the laptop's IP is `192.168.1.10` and the server uses port `8769`, open:
-
-```text
-http://192.168.1.10:8769
-```
-
-Use your laptop's actual IP address and the port configured for your server.
-
-**Important:** The laptop and phone should be connected to the same network, and the firewall must allow the selected port. Some guest Wi-Fi networks isolate devices from one another.
-
-### 6. Enable phone alerts
-
-1. Open DeskOS on your phone.
-2. Tap **Enable phone alerts**.
-3. Confirm that the test sound and vibration work.
-4. Keep the dashboard page active for the most reliable results.
-5. Enable Android's **Stay awake while charging** option if you want the display to remain on while charging.
-
-Browser-based vibration and sound are subject to device and browser limitations.
-
-## ⏰ Reminder API and recovery behavior
-
-Reminder endpoints are served by the same local DeskOS process:
-
-| Method and route | Behavior |
-|---|---|
-| `GET /api/reminders` | List active reminders |
-| `GET /api/reminders?all=1` | Include completed and cancelled reminders |
-| `POST /api/reminders` | Create a reminder with `title`, timezone-aware ISO-8601 `due_at`, optional `recurrence` (`none`, `daily`, or `weekly`), and optional IANA `timezone` |
-| `PATCH /api/reminders/<id>` | Edit an active reminder's title, due time, recurrence, or timezone |
-| `POST /api/reminders/<id>/complete` | Complete an active reminder |
-| `DELETE /api/reminders/<id>` | Cancel an active reminder without deleting its history |
-| `GET /api/notifications` | List due notifications not yet acknowledged |
-| `POST /api/notifications/<id>/ack` | Acknowledge a delivered notification |
-
-One-time reminders are marked complete when dispatched. If DeskOS was stopped when one became due, it creates the pending notification after restart. For recurring reminders, downtime produces one notification for the missed schedule; missed repeats are coalesced, and the next future occurrence is retained. Notification records remain until acknowledged. These APIs have no authentication: use only on a trusted LAN, and never port-forward DeskOS to the public internet.
-
-The database is `deskos.sqlite3` inside `DESKOS_DATA_DIR`. The default is `~/.local/share/deskos`; DeskOS restricts the directory to the service user and the database file to owner-only access. Back up the data directory while the service is stopped to preserve SQLite consistency.
-
-## 🤖 Local assistant command MVP
-
-The dashboard's text command panel submits `POST /api/assistant/command` with `{"command":"..."}`. For confirmed reminder cancellation, it sends the same command with `"confirm": true` after an explicit browser confirmation. The fixed router supports:
-
-- `What time is it?`
-- `How is my laptop doing?` or `Is my laptop online?`
-- `Show my reminders`
-- `Remind me to stretch in 10 minutes` (minutes, hours, days, or weeks)
-- `Cancel reminder to stretch` (requires confirmation and an exact unique title)
-- `Stop listening` (there is no microphone session in this text-only MVP)
-
-The request accepts only `command` and `confirm`, with a 500-character command limit. The tool catalog is an explicit allowlist; DeskOS does not expose shell or arbitrary process execution. Voice input, wake-word detection, and local speech recognition remain unimplemented until a local, offline-capable stack can be evaluated on the target hardware.
-
-### Run regression tests
-
-From the project root, run the backend tests with:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-The tests exercise the local health/status endpoints and CPU-temperature sensor selection. They do not verify browser behavior or physical phone alerts.
+### 5. 🔒 Zero-Trust Device Security & Pairing Gate
+* **6-Digit Pairing PIN:** Unknown remote devices are blocked by a secure modal gate until authenticated using the PIN displayed on the workstation terminal or configured in `.env`.
+* **365-Day Session Cookie:** Authenticated devices receive a cryptographically secure `deskos_token` cookie valid for 1 year.
+* **Localhost Bypass:** Loopback (`127.0.0.1`) is auto-whitelisted for local kiosk and developer use.
 
 ---
 
-## 🔔 Configure a custom alert sound
+## 📁 Repository Structure
 
-DeskOS can play a custom audio file instead of generating a basic beep.
-
-The dashboard's audio element should point to a path that your backend actually serves. For example:
-
-```javascript
-const alertSound = new Audio('/sounds/my-alert.mp3');
-alertSound.preload = 'auto';
-alertSound.volume = 1.0;
 ```
-
-Place the sound file in the appropriate directory for your server's static-file configuration, and update the URL to match that configuration.
-
-For example, if your server serves the `static` directory at `/static`, a file located at `static/sounds/my-alert.mp3` would normally be referenced as:
-
-```javascript
-const alertSound = new Audio('/static/sounds/my-alert.mp3');
+deskos/
+├── agent/
+│   └── desk_agent.py             # Workstation telemetry sidecar daemon (runs on laptop)
+├── assistant.py                  # Gemini function-calling router & assistant tools
+├── data/                         # Persistent volume mount (SQLite, tokens, auth state)
+│   ├── authorized_devices.json   # (Ignored) Paired device tokens
+│   ├── deskos.sqlite3            # (Ignored) Tasks and reminders database
+│   └── token.json                # (Ignored) Google Workspace OAuth tokens
+├── device_auth.py                # Zero-trust PIN validation & cookie authorization
+├── docker-compose.yml            # Multi-container orchestration (DeskOS + Nginx)
+├── Dockerfile                    # Multi-arch Debian Bookworm Python 3.11 image
+├── nginx/
+│   ├── certs/                    # SSL certificates (deskos.crt, deskos.key)
+│   └── nginx.conf                # HTTPS redirect & unbuffered SSE streaming config
+├── reminder_store.py             # SQLite persistence layer for tasks & schedules
+├── requirements.txt              # Production Python dependencies
+├── scripts/
+│   ├── deploy_to_pi.py           # Automated SSH/rsync sync and container reload
+│   ├── gen_certs.sh              # OpenSSL multi-domain & IP SAN certificate generator
+│   └── install_laptop_agent.sh   # Systemd service installer for laptop telemetry agent
+├── server.py                     # Asynchronous DeskOS master HTTP & SSE server
+├── services/
+│   ├── calendar_service.py       # Google Calendar API integration
+│   ├── docs_service.py           # Google Docs & Drive API integration
+│   └── gmail_service.py          # Gmail API integration
+└── static/
+    ├── icons/                    # Web manifest PWA icons
+    ├── index.html                # Single-page Desk Assistant console (100dvh, zero scroll)
+    └── sounds/
+        └── my-alert.mp3          # Workstation hardware siren audio
 ```
-
-To play it when a warning appears:
-
-```javascript
-async function playAlertSound() {
-  try {
-    alertSound.pause();
-    alertSound.currentTime = 0;
-    await alertSound.play();
-  } catch (error) {
-    console.warn('Could not play DeskOS alert sound:', error);
-  }
-}
-```
-
-Call this function from your existing alert handler rather than creating a new audio object on every dashboard refresh.
-
-The browser may require a user interaction before allowing sound playback.
-
-### Vibration
-
-A longer vibration pattern can be requested through the browser's Vibration API:
-
-```javascript
-if ('vibrate' in navigator) {
-  navigator.vibrate([500, 150, 500, 150, 700]);
-}
-```
-
-The values represent alternating vibration and pause durations in milliseconds. The phone controls the actual vibration intensity; JavaScript cannot directly increase motor strength.
 
 ---
 
-## 🔄 Run DeskOS automatically with systemd
+## 🚀 Installation & Deployment Guide
 
-You can run the backend as a background service so it starts automatically when Ubuntu boots.
+### Prerequisites
+* **Master Host:** Raspberry Pi 4 (or Linux server) with Docker & Docker Compose installed.
+* **Workstation:** Ubuntu / Debian laptop with Python 3.10+ and `psutil`.
+* **Display Device:** Any smartphone, tablet, or secondary monitor on the local Wi-Fi.
 
-The repository includes `install-deskos-service.sh`; from the intended checkout, run `./install-deskos-service.sh` to create/update the unit. It defaults to port `8769`, binds to `0.0.0.0`, and stores persistent data under `$XDG_DATA_HOME/deskos` (or `~/.local/share/deskos`). Set `DESKOS_PORT`, `DESKOS_HOST`, or `DESKOS_DATA_DIR` before running it to override those defaults. The script refuses to replace an active DeskOS service that points at a different checkout unless invoked with `./install-deskos-service.sh --replace-existing`. That option only replaces the unit; it does not migrate another checkout's data. Confirm the paths and back up any existing data before replacing a deployment.
+---
 
-Create a service file:
+### Step 1: Configure Environment on Raspberry Pi
+
+1. Clone or copy the repository to your Raspberry Pi:
+   ```bash
+   git clone https://github.com/your-username/deskos.git ~/deskos
+   cd ~/deskos
+   ```
+
+2. Create your `.env` configuration:
+   ```bash
+   cp .env.example .env
+   nano .env
+   ```
+   Populate your keys:
+   ```ini
+   GEMINI_API_KEY=your_gemini_api_key_here
+   DESKOS_GEMINI_MODEL=gemini-flash-lite-latest
+   DESKOS_DEVICE_PIN=010622
+   DESKOS_AGENT_SECRET=deskos-laptop-secret-key
+   ```
+
+3. Generate the Multi-Domain SSL Certificate (includes IP SAN):
+   ```bash
+   bash scripts/gen_certs.sh
+   ```
+
+4. Launch the Docker Stack:
+   ```bash
+   sudo docker-compose up -d --build
+   ```
+   Check status:
+   ```bash
+   sudo docker-compose ps
+   ```
+
+---
+
+### Step 2: Install Workstation Telemetry Agent on Your Laptop
+
+To stream live CPU, RAM, NVMe, and temperature metrics from your laptop to the Raspberry Pi:
+
+1. On your laptop, install dependencies:
+   ```bash
+   pip install psutil
+   ```
+
+2. Run the automated systemd installer:
+   ```bash
+   bash scripts/install_laptop_agent.sh "https://raspberrypi.local"
+   ```
+   *(Or pass the Pi's IP: `bash scripts/install_laptop_agent.sh "https://192.168.29.137"`)*
+
+3. Verify the service is active and streaming:
+   ```bash
+   systemctl --user status deskos-agent.service
+   journalctl --user -u deskos-agent.service -f
+   ```
+
+---
+
+### Step 3: Access DeskOS on Mobile Devices & Tablets
+
+#### On Modern Devices (Android 12+, iOS, iPadOS, Desktop):
+* Open Chrome or Safari and go to:
+  ```
+  https://raspberrypi.local
+  ```
+  *(or `https://deskos.local`)*
+
+#### On Older Devices (Android 9, Realme C2, ColorOS):
+Android 9 does not natively resolve `.local` mDNS domains. Access the Pi directly via its static LAN IP:
+1. Connect your phone to your **home Wi-Fi**.
+2. Open **Google Chrome**.
+3. Navigate to:
+   ```
+   https://192.168.29.137
+   ```
+4. Tap **"Advanced"** $\rightarrow$ **"Proceed to 192.168.29.137 (unsafe)"** *(bypasses local self-signed certificate)*.
+5. Enter your 6-digit Device Pairing PIN: **`010622`**.
+
+---
+
+## 🛠️ Rapid Updates & Development Sync
+
+The [scripts/deploy_to_pi.py](file:///home/aryam/Documents/deskos/scripts/deploy_to_pi.py) script allows you to make changes on your laptop and instantly deploy them to the Pi in seconds without slow Docker rebuilds:
 
 ```bash
-sudo nano /etc/systemd/system/deskos.service
+# Deploys code, static files, and SSL certs, then hot-restarts the Pi container:
+python3 scripts/deploy_to_pi.py
 ```
-
-Add the following configuration, adjusting the paths and port to match your installation:
-
-```ini
-[Unit]
-Description=DeskOS Workstation Dashboard
-After=network.target
-
-[Service]
-Type=simple
-User=YOUR_LINUX_USERNAME
-WorkingDirectory=/absolute/path/to/deskos
-Environment=DESKOS_HOST=0.0.0.0
-Environment=DESKOS_PORT=8769
-ExecStart=/absolute/path/to/deskos/.venv/bin/python /absolute/path/to/deskos/server.py
-Restart=on-failure
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Replace `YOUR_LINUX_USERNAME` and both project paths before saving. The `ExecStart` command must use the actual Python interpreter and backend file locations.
-
-Enable and start the service:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now deskos
-```
-
-Check its status:
-
-```bash
-sudo systemctl status deskos
-```
-
-Follow the logs:
-
-```bash
-journalctl -u deskos -f
-```
-
-Restart it after changing backend code:
-
-```bash
-sudo systemctl restart deskos
-```
-
-**Laptop sleep:** systemd does not prevent Ubuntu from suspending. Configure your laptop's power settings if you need the dashboard server to stay available continuously.
 
 ---
 
-## 🛠️ Troubleshooting
+## 🛡️ Git Safety & Sensitive Files (`.gitignore`)
 
-### The phone says "Laptop unavailable"
+DeskOS is designed with strict security practices. The following sensitive files are **never committed to version control**:
 
-1. Confirm that DeskOS is running on the laptop.
-2. Verify that the phone uses the correct laptop IP and server port.
-3. Open the backend's `/api/status` endpoint directly in the phone browser.
-4. Confirm that the endpoint returns JSON.
-5. Check firewall rules and Wi-Fi client isolation.
-6. Inspect the backend logs for errors.
+| File / Pattern | Reason for Exclusion |
+| :--- | :--- |
+| `.env` / `.env.*` | Stores your private `GEMINI_API_KEY` and `DESKOS_AGENT_SECRET`. |
+| `credentials.json` | Google Cloud Console OAuth 2.0 Client Secrets. |
+| `data/token.json` | Google user offline refresh tokens. |
+| `data/authorized_devices.json` | Authorized device session tokens. |
+| `data/*.sqlite3*` | Local databases holding personal tasks and reminders. |
+| `nginx/certs/*.key`, `*.crt` | Private SSL keys and TLS certificates. |
+| `scripts/deploy_to_pi.py` | Local deployment automation containing host SSH passwords. |
+| `/static/sounds/my-alert.mp3` | Large local audio assets. |
 
-### The custom sound does not play
-
-- Verify that the audio URL opens directly in the phone browser.
-- Check that the file exists at the expected server path.
-- Ensure the filename and extension match exactly.
-- Tap the phone's **Enable phone alerts** button before testing.
-- Check Android media volume and browser restrictions.
-
-### Vibration does not work
-
-- Confirm that the phone supports browser-triggered vibration.
-- Check Android settings and vibration permissions.
-- Test while the dashboard is open and active.
-- Remember that some browsers do not implement the Vibration API.
-
-### CPU temperature or battery information is missing
-
-Not all systems expose the same sensors. Battery readings depend on the laptop hardware, and temperature readings depend on available Linux sensor drivers. Missing values do not necessarily indicate a DeskOS failure.
-
-### The service fails to start
-
-Check the service logs:
-
-```bash
-journalctl -u deskos -n 100 --no-pager
-```
-
-Verify the working directory, Python executable, dependencies, configured port, and server environment-variable support.
+Always use `.env.example` as a template for committing configuration documentation.
 
 ---
 
-## 🔐 Security and privacy
+## 📋 API & Route Reference
 
-- DeskOS is designed for use on a trusted local network.
-- The default setup uses HTTP, not HTTPS.
-- Do not expose the server port directly to the public internet.
-- The dashboard may reveal workstation information, such as resource usage and running process IDs.
-- Use a trusted Wi-Fi network and appropriate firewall rules.
-- Add authentication and encrypted transport before exposing the dashboard beyond your trusted local network.
-
----
-
-## 🗺️ Future improvements
-
-Potential future enhancements include:
-
-- Configurable CPU, RAM, temperature and storage thresholds.
-- Separate sound profiles for warnings and critical alerts.
-- A dashboard settings panel for choosing alert sounds and vibration patterns.
-- Configurable monitoring intervals.
-- Application and API health checks for Node.js and Bun projects.
-- More detailed service monitoring.
-- Better support for offline and reconnection states.
-- Secure controls for workstation power management.
-- A configurable dashboard layout and additional clock styles.
-
-These are possible future enhancements, not promises that every feature is already implemented.
+| Route / Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/` or `/assistant` | `GET` | Main Desk Assistant HUD and telemetry cluster. |
+| `/tasks` | `GET` | Task and agenda management deck. |
+| `/google` | `GET` | Google Calendar events and Google Docs view. |
+| `/reminders` | `GET` | Scheduled reminder deck. |
+| `/analytics` | `GET` | Productivity velocity & hardware analytics deck. |
+| `/api/events` | `GET` | Real-time Server-Sent Events (SSE) telemetry stream. |
+| `/api/status` | `GET` | Current workstation hardware snapshot. |
+| `/api/telemetry/report` | `POST` | Ingestion endpoint for workstation telemetry agent. |
+| `/api/auth/pair` | `POST` | 6-digit PIN device pairing endpoint. |
+| `/api/assistant/enqueue` | `POST` | Natural language voice & text command router. |
+| `/api/calendar/events` | `GET` | Google Calendar synchronization. |
+| `/api/docs` | `GET` | Google Docs generated notes list. |
 
 ---
 
-## 🤝 Contributing
-
-Suggestions, bug reports, and contributions are welcome.
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Make a focused change.
-4. Test the dashboard on your intended device.
-5. Open a pull request with a clear explanation.
-
-Please avoid committing personal audio files, credentials, private IP details, virtual environments, or machine-specific configuration.
-
----
-
-## 📄 License
-
-Choose a license before publishing the repository. For example, the MIT License is a common choice for open-source software. If you select MIT, add a `LICENSE` file with the appropriate copyright holder and year.
-
----
-
-**DeskOS — Give your old phone a new purpose.**
-
-A lightweight dashboard for the workstation you use every day.
+## 📜 License
+DeskOS is open-source under the MIT License. Developed for self-hosted productivity and private home workstation companionship.
