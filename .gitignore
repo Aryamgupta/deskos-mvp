@@ -9,4 +9,4 @@ credentials.json
 data/token.json
 token.json
 data/authorized_devices.json
-
+scripts/deploy_to_pi.py

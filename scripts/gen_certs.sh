@@ -16,6 +16,7 @@ default_bits = 2048
 prompt = no
 default_md = sha256
 req_extensions = req_ext
+x509_extensions = req_ext
 distinguished_name = dn
 
 [dn]
@@ -33,6 +34,8 @@ DNS.1 = deskos.local
 DNS.2 = raspberrypi.local
 DNS.3 = localhost
 IP.1 = 127.0.0.1
+IP.2 = 192.168.29.137
+IP.3 = 192.168.1.137
 EOF
 
 openssl req -x509 -nodes -days 1825 -newkey rsa:2048 \
