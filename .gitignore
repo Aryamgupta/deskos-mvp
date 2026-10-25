@@ -8,3 +8,5 @@ data/deskos.sqlite3
 credentials.json
 data/token.json
 token.json
+data/authorized_devices.json
+

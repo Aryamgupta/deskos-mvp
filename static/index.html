@@ -616,6 +616,67 @@ html,body{
   box-shadow:0 0 20px rgba(255,92,92,.3);
 }
 
+.transcript-actions{
+  display:none;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+}
+.transcript-actions.active{
+  display:flex;
+}
+.btn-voice-act{
+  padding:6px 12px;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  transition:all .15s;
+}
+.btn-voice-act.cancel{
+  background:rgba(255,92,92,.12);
+  border:1px solid rgba(255,92,92,.35);
+  color:var(--red);
+}
+.btn-voice-act.cancel:hover{
+  background:rgba(255,92,92,.25);
+}
+.btn-voice-act.retry{
+  background:rgba(255,170,51,.12);
+  border:1px solid rgba(255,170,51,.35);
+  color:var(--amber);
+}
+.btn-voice-act.retry:hover{
+  background:rgba(255,170,51,.25);
+}
+.btn-voice-act.send{
+  background:rgba(56,217,245,.15);
+  border:1px solid rgba(56,217,245,.4);
+  color:var(--cy);
+}
+.btn-voice-act.send:hover{
+  background:rgba(56,217,245,.25);
+}
+.send-countdown-bar{
+  height:3px;
+  background:var(--card-border-subtle);
+  border-radius:2px;
+  margin-top:8px;
+  overflow:hidden;
+  display:none;
+}
+.send-countdown-bar.active{display:block}
+.send-countdown-fill{
+  height:100%;
+  width:100%;
+  background:var(--cy);
+  box-shadow:0 0 6px var(--cy-glow);
+  transition:width linear;
+}
+
 .voice-transcript-pod{
   display:flex;
   flex-direction:column;
@@ -790,6 +851,55 @@ html,body{
   animation:micPulse 1.2s infinite ease-in-out;
 }
 @keyframes micPulse{0%,100%{box-shadow:0 0 5px rgba(255,92,92,.5)}50%{box-shadow:0 0 18px rgba(255,92,92,.85)}}
+
+/* Device Pairing Auth Modal Overlay */
+.auth-gate-overlay{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:radial-gradient(circle at 50% 30%, #0d1a29 0%, #03060a 90%);
+  flex-direction:column;align-items:center;justify-content:center;
+  padding:20px;text-align:center;
+}
+.auth-gate-overlay.active{display:flex}
+.auth-card{
+  background:rgba(9,21,34,.85);
+  border:1px solid rgba(56,217,245,.3);
+  border-radius:20px;
+  padding:32px 24px;
+  max-width:380px;width:100%;
+  box-shadow:0 0 50px rgba(0,0,0,.9), 0 0 20px rgba(56,217,245,.15);
+  display:flex;flex-direction:column;align-items:center;
+}
+.auth-logo-badge{
+  width:52px;height:52px;border-radius:50%;
+  background:rgba(56,217,245,.1);border:1px solid var(--cy);
+  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+  color:var(--cy);box-shadow:0 0 15px rgba(56,217,245,.25);
+}
+.auth-title{font-size:18px;font-weight:700;color:var(--text-main);margin-bottom:6px;letter-spacing:-.01em}
+.auth-sub{font-size:12px;color:var(--text-dim);line-height:1.45;margin-bottom:20px}
+.pin-input-group{
+  display:flex;gap:8px;justify-content:center;margin-bottom:20px;
+}
+.pin-digit-input{
+  width:42px;height:52px;border-radius:10px;
+  background:rgba(5,9,15,.8);border:1px solid var(--card-border);
+  color:var(--cy);font-size:24px;font-weight:700;
+  text-align:center;outline:none;font-family:monospace;
+  transition:border-color .15s, box-shadow .15s;
+}
+.pin-digit-input:focus{
+  border-color:var(--cy);box-shadow:0 0 12px var(--cy-glow);
+}
+.auth-error-msg{
+  font-size:11px;color:var(--red);margin-bottom:12px;min-height:16px;
+}
+.btn-pair-device{
+  width:100%;padding:12px;border-radius:12px;border:0;
+  background:linear-gradient(135deg, var(--cy) 0%, #299fba 100%);
+  color:#03141a;font-size:13px;font-weight:700;cursor:pointer;
+  letter-spacing:.03em;transition:opacity .15s;
+}
+.btn-pair-device:disabled{opacity:.4;cursor:not-allowed}
 
 /* Generic Alert Toast */
 .alert-toast{
@@ -1028,10 +1138,26 @@ html,body{
     <!-- DECK 3: VOICE ASSISTANT NEURAL CORE (/voice) -->
     <section class="deck" id="deck-voice">
       <article class="cluster-pod voice-transcript-pod">
-        <div class="pod-title">SPEECH RECOGNITION (STT)</div>
+        <div class="task-header-row">
+          <div class="pod-title" style="margin-bottom:0">SPEECH RECOGNITION (STT)</div>
+          <select id="voiceLangSelect" class="car-input" style="padding:2px 8px;font-size:10px;height:24px" title="Speech Recognition Language">
+            <option value="en-IN" selected>English (India)</option>
+            <option value="hi-IN">Hindi (हिन्दी)</option>
+            <option value="en-US">English (US)</option>
+          </select>
+        </div>
         <div class="transcript-bubble">
-          <div class="transcript-label">USER TRANSCRIPT / LIVE RECOGNITION</div>
+          <div class="transcript-label" id="transcriptStateLabel">USER TRANSCRIPT / LIVE RECOGNITION</div>
           <div class="transcript-text" id="voiceUserText">Say "Hello Desk" or tap Push to Talk to begin speaking…</div>
+          <div class="send-countdown-bar" id="sendCountdownBar">
+            <div class="send-countdown-fill" id="sendCountdownFill"></div>
+          </div>
+          <!-- Tactile Voice Actions: Cancel, Retry, Send Immediately -->
+          <div class="transcript-actions" id="transcriptActions">
+            <button type="button" class="btn-voice-act cancel" id="btnCancelVoice" title="Cancel command and do not send">✕ Cancel</button>
+            <button type="button" class="btn-voice-act retry" id="btnRetryVoice" title="Clear and speak again">↻ Retry</button>
+            <button type="button" class="btn-voice-act send" id="btnSendVoiceNow" title="Send immediately">✓ Send Now</button>
+          </div>
         </div>
       </article>
 
@@ -1175,11 +1301,128 @@ html,body{
     <span id="toastMessage">Notification</span>
     <button type="button" onclick="$('alertToast').classList.remove('show')">✕</button>
   </aside>
+
+  <!-- DEVICE PAIRING AUTH LOCK SCREEN MODAL -->
+  <aside class="auth-gate-overlay" id="authGateOverlay">
+    <div class="auth-card">
+      <div class="auth-logo-badge">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div class="auth-title">DeskOS Security Lock</div>
+      <div class="auth-sub">
+        This device is not yet paired. Enter the 6-digit Device Pairing PIN shown on the host workstation terminal:
+      </div>
+      <form id="authPairForm" style="width:100%">
+        <div class="pin-input-group">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autofocus autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        </div>
+        <div class="auth-error-msg" id="authErrorMsg"></div>
+        <button type="submit" class="btn-pair-device" id="btnPairDevice" disabled>AUTHENTICATE DEVICE</button>
+      </form>
+    </div>
+  </aside>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* === DEVICE PAIRING & AUTH CHECK === */
+let isDeviceAuthenticated = false;
+
+async function checkDeviceAuth() {
+  try {
+    const res = await fetch('/api/auth/status');
+    if (res.ok) {
+      const data = await res.json();
+      isDeviceAuthenticated = data.authenticated;
+      const overlay = $('authGateOverlay');
+      if (!isDeviceAuthenticated && !data.is_local) {
+        overlay.classList.add('active');
+        setupPinInputs();
+      } else {
+        overlay.classList.remove('active');
+      }
+    }
+  } catch (e) {}
+}
+
+function setupPinInputs() {
+  const inputs = document.querySelectorAll('.pin-digit-input');
+  const submitBtn = $('btnPairDevice');
+
+  const checkComplete = () => {
+    const pin = Array.from(inputs).map(i => i.value).join('');
+    submitBtn.disabled = pin.length !== 6;
+  };
+
+  inputs.forEach((input, index) => {
+    input.addEventListener('input', e => {
+      input.value = input.value.replace(/[^0-9]/g, '');
+      if (input.value && index < inputs.length - 1) {
+        inputs[index + 1].focus();
+      }
+      checkComplete();
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !input.value && index > 0) {
+        inputs[index - 1].focus();
+      }
+    });
+
+    input.addEventListener('paste', e => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+      if (text.length >= 6) {
+        inputs.forEach((inp, idx) => inp.value = text[idx] || '');
+        checkComplete();
+      }
+    });
+  });
+
+  $('authPairForm').onsubmit = async e => {
+    e.preventDefault();
+    const pin = Array.from(inputs).map(i => i.value).join('');
+    $('authErrorMsg').textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'AUTHENTICATING…';
+
+    try {
+      const res = await fetch('/api/auth/pair', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          pin,
+          name: navigator.userAgent.includes('Mobile') ? 'Mobile Phone' : 'Laptop'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        $('authGateOverlay').classList.remove('active');
+        showToast('Device authenticated successfully!');
+        window.location.reload();
+      } else {
+        $('authErrorMsg').textContent = data.error || 'Invalid PIN';
+        inputs.forEach(i => i.value = '');
+        inputs[0].focus();
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'AUTHENTICATE DEVICE';
+      }
+    } catch (err) {
+      $('authErrorMsg').textContent = 'Network error connecting to DeskOS host';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'AUTHENTICATE DEVICE';
+    }
+  };
+}
+
+checkDeviceAuth();
 
 /* === ROUTING & DECK SWITCHING SYSTEM === */
 const ROUTES = {
@@ -1905,8 +2148,30 @@ if (SpeechRec) {
     updateMicVisuals(isAwaitingCommand);
   };
 
+  recognizer.onerror = event => {
+    console.warn('[DeskOS SpeechRec error]:', event.error);
+    isListening = false;
+    updateMicVisuals(false);
+    // Ignore harmless 'no-speech' or 'aborted' events and immediately restart
+    if (wakeWordActive && !isSpeaking) {
+      setTimeout(() => {
+        try { if (!isListening) recognizer.start(); } catch(e) {}
+      }, 300);
+    }
+  };
+
+  recognizer.onend = () => {
+    isListening = false;
+    updateMicVisuals(false);
+    // Continuously restart background listening whenever browser closes recognition session
+    if (wakeWordActive && !isSpeaking) {
+      setTimeout(() => {
+        try { if (!isListening) recognizer.start(); } catch(e) {}
+      }, 150);
+    }
+  };
+
   recognizer.onresult = event => {
-    // If the assistant is currently speaking aloud, discard audio so it does not listen to itself
     if (isSpeaking) {
       currentTranscript = '';
       return;
@@ -1919,12 +2184,13 @@ if (SpeechRec) {
       else interim += trans;
     }
     const fullText = (currentTranscript + ' ' + interim).trim();
+    if (!fullText) return;
 
-    // If wake word is active and we are idle, match natural conversational wake phrases:
+    // Phase 1: Idle mode - Listen for wake word
     if (wakeWordActive && !isAwaitingCommand) {
       const lower = fullText.toLowerCase();
-      // Broadened phonetic wake phrase matcher (handles accents, casual phrasing, regional pronunciation)
-      const match = lower.match(/\b(hello\s*desk|hey\s*desk|ok\s*desk|desk\s*os|desk\s*assistant|hi\s*desk|hallo\s*desk|suno\s*desk|desk|desktop)\b/i);
+      // Broadened phonetic matches: desk, hello desk, hey desk, ok desk, suno desk, hi desk, etc.
+      const match = lower.match(/\b(hello\s*desk|hey\s*desk|ok\s*desk|desk\s*os|hi\s*desk|hallo\s*desk|suno\s*desk|desk|desktop|test)\b/i);
       if (match) {
         playTaskChime();
         isAwaitingCommand = true;
@@ -1933,43 +2199,33 @@ if (SpeechRec) {
         navigateTo('/voice');
 
         const postWake = fullText.substring(match.index + match[0].length).trim();
-        if (postWake.length > 2) {
+        if (postWake.length > 1) {
           $('voiceUserText').textContent = `"${postWake}"`;
+          currentTranscript = postWake;
         } else {
           $('voiceUserText').textContent = 'Listening for command…';
         }
 
         if (silenceTimer) clearTimeout(silenceTimer);
-        // Generous silence threshold (3.5s) to allow natural pauses when speaking lengthy sentences
-        silenceTimer = setTimeout(() => {
-          if (isListening && isAwaitingCommand) submitSpokenCommand();
-        }, 3500);
+        showVoiceActions(true);
+        return;
       }
+      // If no wake word match yet, don't let currentTranscript grow indefinitely in background
+      if (currentTranscript.length > 120) currentTranscript = '';
       return;
     }
 
+    // Phase 2: Command capture mode
     if (isAwaitingCommand) {
       $('voiceUserText').textContent = `"${fullText}"`;
+      showVoiceActions(true);
+      // Wait for 2.2 seconds of silence after the last spoken word before starting countdown
       if (silenceTimer) clearTimeout(silenceTimer);
-      // Increased from 2.2s to 3.8s so user can speak lengthy commands without premature cut-offs
       silenceTimer = setTimeout(() => {
-        if (isListening && isAwaitingCommand) submitSpokenCommand();
-      }, 3800);
-    }
-  };
-
-  recognizer.onerror = event => {
-    // Automatically resume recognizer on temporary abort or network glitch
-    if (wakeWordActive && !isAwaitingCommand && !isSpeaking) {
-      setTimeout(startBackgroundWakeListener, 400);
-    }
-  };
-  recognizer.onend = () => {
-    isListening = false;
-    updateMicVisuals(false);
-    // Continuous background listening persists across all routes (/cockpit, /tasks, /ambient, etc.)
-    if (wakeWordActive && !isAwaitingCommand && !isSpeaking) {
-      setTimeout(startBackgroundWakeListener, 250);
+        if (isAwaitingCommand) {
+          startSendCountdown(3500);
+        }
+      }, 2200);
     }
   };
 }
@@ -1982,9 +2238,94 @@ function updateMicVisuals(listening) {
   $('voiceStatusBadge').textContent = listening ? 'LISTENING' : 'READY';
 }
 
-function submitSpokenCommand(explicitText) {
-  isAwaitingCommand = false;
+function showVoiceActions(show) {
+  const actions = $('transcriptActions');
+  if (actions) actions.classList.toggle('active', show);
+}
+
+function startSendCountdown(ms = 4000) {
   if (silenceTimer) clearTimeout(silenceTimer);
+  const bar = $('sendCountdownBar');
+  const fill = $('sendCountdownFill');
+  if (bar && fill) {
+    bar.classList.add('active');
+    fill.style.transition = 'none';
+    fill.style.width = '100%';
+    setTimeout(() => {
+      fill.style.transition = `width ${ms}ms linear`;
+      fill.style.width = '0%';
+    }, 20);
+  }
+
+  silenceTimer = setTimeout(() => {
+    if (isListening && isAwaitingCommand) {
+      submitSpokenCommand();
+    }
+  }, ms);
+}
+
+function stopSendCountdown() {
+  if (silenceTimer) clearTimeout(silenceTimer);
+  const bar = $('sendCountdownBar');
+  if (bar) bar.classList.remove('active');
+}
+
+/* User Cancellation / Retry Controls */
+function cancelSpokenCommand() {
+  stopSendCountdown();
+  showVoiceActions(false);
+  isAwaitingCommand = false;
+  currentTranscript = '';
+  updateMicVisuals(false);
+  try { if (recognizer && isListening) recognizer.stop(); } catch (e) {}
+  $('voiceUserText').textContent = 'Command cancelled.';
+  showToast('Voice command cancelled. Token saved.');
+  setTimeout(() => {
+    $('voiceUserText').textContent = 'Say "Hello Desk" or tap Push to Talk to begin speaking…';
+    if (wakeWordActive && !isSpeaking) startBackgroundWakeListener();
+  }, 1200);
+}
+
+function retrySpokenCommand() {
+  stopSendCountdown();
+  showVoiceActions(false);
+  isAwaitingCommand = true;
+  currentTranscript = '';
+  $('voiceUserText').textContent = 'Listening again… Speak clearly.';
+  updateMicVisuals(true);
+  try {
+    if (recognizer) {
+      if (!isListening) recognizer.start();
+    }
+  } catch (e) {}
+}
+
+$('btnCancelVoice').addEventListener('click', cancelSpokenCommand);
+$('btnRetryVoice').addEventListener('click', retrySpokenCommand);
+$('btnSendVoiceNow').addEventListener('click', () => {
+  stopSendCountdown();
+  submitSpokenCommand();
+});
+
+/* Language Selector for Speech Recognition (en-IN, hi-IN, en-US) */
+$('voiceLangSelect').addEventListener('change', e => {
+  const newLang = e.target.value;
+  if (recognizer) {
+    recognizer.lang = newLang;
+    try {
+      if (isListening) {
+        recognizer.stop();
+        setTimeout(() => recognizer.start(), 200);
+      }
+    } catch (err) {}
+    showToast(`Speech language set to ${e.target.options[e.target.selectedIndex].text}`);
+  }
+});
+
+function submitSpokenCommand(explicitText) {
+  stopSendCountdown();
+  showVoiceActions(false);
+  isAwaitingCommand = false;
   updateMicVisuals(false);
 
   // Immediately stop recognizer while command is submitted and being answered
@@ -1993,12 +2334,11 @@ function submitSpokenCommand(explicitText) {
   } catch (e) {}
 
   const command = explicitText || $('voiceUserText').textContent.replace(/^"|"$/g, '').trim();
-  if (command && command !== 'Listening for command…') {
+  if (command && command !== 'Listening for command…' && command !== 'Listening to your command…' && command !== 'Command cancelled.') {
     enqueueCommand(command);
   }
 
   currentTranscript = '';
-  // Note: Recognizer will be resumed automatically AFTER speech synthesis finishes speaking
 }
 
 async function enqueueCommand(command) {
@@ -2038,8 +2378,14 @@ function triggerPushToTalk() {
     isAwaitingCommand = true;
     currentTranscript = '';
     $('voiceUserText').textContent = 'Listening to your command…';
+    showVoiceActions(true);
     updateMicVisuals(true);
-    try { if (!isListening) recognizer.start(); } catch (e) {}
+    try {
+      if (!isListening) {
+        recognizer.start();
+        isListening = true;
+      }
+    } catch (e) {}
   }
 }
 
@@ -2066,14 +2412,20 @@ let speechActivated = false;
 function startBackgroundWakeListener() {
   if (!recognizer || !wakeWordActive || isSpeaking) return;
   try {
-    if (!isListening) recognizer.start();
+    if (!isListening) {
+      recognizer.start();
+      isListening = true;
+    }
   } catch (err) {
     // If browser threw InvalidStateError because it was transitioning, retry once shortly
     setTimeout(() => {
       try {
-        if (wakeWordActive && !isListening && !isSpeaking) recognizer.start();
+        if (wakeWordActive && !isListening && !isSpeaking) {
+          recognizer.start();
+          isListening = true;
+        }
       } catch (e) {}
-    }, 300);
+    }, 400);
   }
 }
 
@@ -2086,6 +2438,13 @@ function startBackgroundWakeListener() {
     }
   }, { passive: true });
 });
+
+// Also attempt immediate start for auto-launch / kiosk
+setTimeout(() => {
+  if (!speechActivated) {
+    startBackgroundWakeListener();
+  }
+}, 800);
 
 /* Fullscreen toggle */
 $('fullscreenToggleBtn').addEventListener('click', async () => {
