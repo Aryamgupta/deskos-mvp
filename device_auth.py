@@ -49,9 +49,15 @@ class DeviceAuthManager:
             print(f"[DeviceAuth] Failed to save {self.auth_file}: {e}")
 
     def generate_pin(self) -> str:
-        """Generate a random 6-digit numeric pairing PIN."""
-        # Cryptographically secure 6-digit PIN
-        self._current_pin = f"{secrets.randbelow(900000) + 100000}"
+        """Generate or load custom pairing PIN."""
+        # Check if user defined a fixed PIN in .env or environment
+        custom_pin = os.environ.get("DESKOS_DEVICE_PIN", "").strip()
+        if custom_pin and len(custom_pin) == 6 and custom_pin.isdigit():
+            self._current_pin = custom_pin
+        else:
+            # Cryptographically secure random 6-digit PIN
+            self._current_pin = f"{secrets.randbelow(900000) + 100000}"
+
         self._pin_created_at = time.time()
         print("\n" + "=" * 60)
         print(f"🔒 DeskOS DEVICE PAIRING PIN:  {self._current_pin}")

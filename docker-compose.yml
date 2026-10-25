@@ -1,0 +1,40 @@
+services:
+  deskos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deskos:v2
+    container_name: deskos-master
+    restart: unless-stopped
+    expose:
+      - "8765"
+    volumes:
+      # Persistent SQLite store, Google tokens, and authorized devices
+      - ./data:/app/data
+      # Environment file with GEMINI_API_KEY and DESKOS_AGENT_SECRET
+      - ./.env:/app/.env:ro
+      # Static web console
+      - ./static:/app/static:ro
+      # Code mounts for instant restarts without slow image rebuilds
+      - ./server.py:/app/server.py:ro
+      - ./device_auth.py:/app/device_auth.py:ro
+      - ./assistant_core.py:/app/assistant_core.py:ro
+      - ./workspace_auth.py:/app/workspace_auth.py:ro
+      - ./services:/app/services:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8765
+
+  nginx:
+    image: nginx:alpine
+    container_name: deskos-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - deskos
+

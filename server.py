@@ -23,6 +23,10 @@ _PROCESS_CACHE = {"at": 0.0, "items": []}
 _TEMP_CACHE = {"at": 0.0, "items": []}
 _GEMINI_ADAPTER = GeminiAdapter.from_environment()
 _DEVICE_AUTH = DeviceAuthManager()
+_REMOTE_LAPTOP_STATUS: dict = {}
+_REMOTE_LAPTOP_LAST_SEEN: float = 0.0
+_REMOTE_LAPTOP_LOCK = Lock()
+
 
 
 
@@ -164,7 +168,7 @@ def select_cpu_temperature(readings):
     return None
 
 
-def collect_status():
+def collect_local_host_status():
     global _NET_PREV, _NET_TIME, _DISK_PREV, _DISK_TIME
     now = time.monotonic()
     net = psutil.net_io_counters()
@@ -239,6 +243,22 @@ def collect_status():
         "network": {"down_bytes_sec": round(down), "up_bytes_sec": round(up)},
         "runtimes": processes[:12],
     }
+
+
+def collect_status():
+    """Return workstation telemetry if laptop agent is actively reporting, otherwise local host metrics."""
+    with _REMOTE_LAPTOP_LOCK:
+        now = time.time()
+        if _REMOTE_LAPTOP_STATUS and (now - _REMOTE_LAPTOP_LAST_SEEN < 20.0):
+            data = dict(_REMOTE_LAPTOP_STATUS)
+            data["laptop_online"] = True
+            data["seconds_since_heartbeat"] = round(now - _REMOTE_LAPTOP_LAST_SEEN, 1)
+            return data
+
+    with CACHE_LOCK:
+        data = collect_local_host_status()
+        data["laptop_online"] = False
+        return data
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -347,11 +367,11 @@ class Handler(SimpleHTTPRequestHandler):
                 _BROADCASTER.unsubscribe(q)
         elif path == "/api/status":
             try:
-                # Serialize collection to avoid overlapping sensor/process scans if two displays connect.
-                with CACHE_LOCK:
-                    self.send_json(200, collect_status())
+                status_data = collect_status()
+                self.send_json(200, status_data)
             except Exception as exc:
                 self.send_json(500, {"error": "Could not collect system status", "detail": str(exc)[:160]})
+
         elif path == "/api/tasks":
             if not self.require_reminder_store():
                 return
@@ -456,6 +476,31 @@ class Handler(SimpleHTTPRequestHandler):
                     self.send_json(401, {"ok": False, "error": "Invalid pairing PIN. Check the terminal on the host workstation."})
             except Exception as exc:
                 self.send_json(400, {"ok": False, "error": str(exc)})
+            return
+
+        # Workstation Telemetry Agent Ingestion Endpoint
+        if path == "/api/telemetry/report":
+            secret = self.headers.get("X-DeskOS-Agent-Secret", "")
+            expected = os.environ.get("DESKOS_AGENT_SECRET", "deskos-laptop-secret-key")
+            if secret != expected:
+                self.send_json(403, {"error": "Invalid agent secret"})
+                return
+            try:
+                data = self.read_json()
+                global _REMOTE_LAPTOP_STATUS, _REMOTE_LAPTOP_LAST_SEEN
+                with _REMOTE_LAPTOP_LOCK:
+                    _REMOTE_LAPTOP_STATUS = data
+                    _REMOTE_LAPTOP_LAST_SEEN = time.time()
+
+                # Immediately push real-time status update to all connected SSE clients
+                telemetry_payload = dict(data)
+                telemetry_payload["laptop_online"] = True
+                telemetry_payload["seconds_since_heartbeat"] = 0.0
+                _BROADCASTER.broadcast("status", telemetry_payload)
+
+                self.send_json(200, {"ok": True, "message": "Telemetry received"})
+            except Exception as exc:
+                self.send_json(400, {"error": str(exc)})
             return
 
         # Enforce authentication for all other POST endpoints
@@ -780,8 +825,7 @@ if __name__ == "__main__":
             while not self.stopping.wait(3):
                 if _BROADCASTER._subscribers:
                     try:
-                        with CACHE_LOCK:
-                            status_data = collect_status()
+                        status_data = collect_status()
                         _BROADCASTER.broadcast("status", status_data)
                     except Exception as exc:
                         print(f"[DeskOS] Telemetry broadcast error: {exc}", flush=True)
