@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 /static/sounds/my-alert.mp3
 /data/deskos.sqlite3
+credentials.json
