@@ -297,6 +297,20 @@ class Handler(SimpleHTTPRequestHandler):
             except sqlite3.Error:
                 self.log_error("Could not list tasks")
                 self.send_json(500, {"error": "Could not load tasks"})
+        elif path == "/api/workspace/status":
+            from workspace_auth import is_authenticated
+            self.send_json(200, {"connected": is_authenticated()})
+        elif path == "/api/calendar/events":
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(200, {"events": [], "connected": False})
+                return
+            try:
+                from services.calendar_service import GoogleCalendarService
+                cal = GoogleCalendarService()
+                self.send_json(200, {"events": cal.get_today_events(), "connected": True})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc), "connected": False})
         elif path == "/api/analytics":
             if not self.require_reminder_store():
                 return
@@ -410,6 +424,20 @@ class Handler(SimpleHTTPRequestHandler):
             except sqlite3.Error:
                 self.log_error("Could not list tasks")
                 self.send_json(500, {"error": "Could not load tasks"})
+        elif path == "/api/workspace/status":
+            from workspace_auth import is_authenticated
+            self.send_json(200, {"connected": is_authenticated()})
+        elif path == "/api/calendar/events":
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(200, {"events": [], "connected": False})
+                return
+            try:
+                from services.calendar_service import GoogleCalendarService
+                cal = GoogleCalendarService()
+                self.send_json(200, {"events": cal.get_today_events(), "connected": True})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc), "connected": False})
         elif path == "/api/analytics":
             if not self.require_reminder_store():
                 return

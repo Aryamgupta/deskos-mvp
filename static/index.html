@@ -755,6 +755,10 @@ html,body{
       <div class="pill-widget" id="tempWidget">TEMP: —</div>
     </div>
     <div class="telem-right">
+      <div class="badge-status" id="googleWorkspaceBadge" style="background:rgba(56,217,245,.08);border-color:rgba(56,217,245,.3);color:var(--cy);cursor:pointer;" title="Google Workspace integration status">
+        <span class="pulse-dot" id="googleDot" style="background:var(--text-dim);box-shadow:none;"></span>
+        <span id="googleStatusText">Google: Offline</span>
+      </div>
       <button class="btn-top" id="wakeWordToggleBtn" type="button" title="Wake word status">🎙️ Wake: On</button>
       <button class="btn-top" id="ambientToggleBtn" type="button">Ambient</button>
       <button class="btn-top" id="fullscreenToggleBtn" type="button">Fullscreen</button>
@@ -1857,6 +1861,31 @@ $('fullscreenToggleBtn').addEventListener('click', async () => {
     else await document.exitFullscreen();
   } catch(e) {}
 });
+
+/* Google Workspace Status Polling */
+async function pollWorkspaceStatus() {
+  try {
+    const res = await fetch('/api/workspace/status');
+    if (res.ok) {
+      const data = await res.json();
+      const dot = $('googleDot');
+      const txt = $('googleStatusText');
+      if (dot && txt) {
+        if (data.connected) {
+          dot.style.background = 'var(--green)';
+          dot.style.boxShadow = '0 0 8px var(--green)';
+          txt.textContent = 'Google: Linked';
+        } else {
+          dot.style.background = 'var(--text-dim)';
+          dot.style.boxShadow = 'none';
+          txt.textContent = 'Google: Offline';
+        }
+      }
+    }
+  } catch (e) {}
+}
+pollWorkspaceStatus();
+setInterval(pollWorkspaceStatus, 15000);
 
 /* Initialize Route from initial URL */
 navigateTo(window.location.pathname, false);

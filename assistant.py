@@ -8,6 +8,10 @@ import re
 from typing import Any, Callable
 
 from gemini_adapter import GeminiAdapter, GeminiError
+from workspace_auth import is_authenticated
+from services.calendar_service import GoogleCalendarService
+from services.gmail_service import GmailService
+from services.docs_service import GoogleDocsService
 
 
 class AssistantRouter:
@@ -24,6 +28,10 @@ class AssistantRouter:
         self.status_provider = status_provider
         self.clock = clock or (lambda: datetime.now().astimezone())
         self.gemini_adapter = gemini_adapter
+        self.calendar_service = GoogleCalendarService()
+        self.gmail_service = GmailService()
+        self.docs_service = GoogleDocsService()
+
 
     def handle(self, command: str, confirm: bool = False, timezone_name: str | None = None) -> dict[str, Any]:
         if not isinstance(confirm, bool):
@@ -59,11 +67,18 @@ class AssistantRouter:
         # Build context for the LLM
         active_reminders = []
         pending_tasks = []
+        calendar_events = []
         try:
             active_reminders = self.reminder_store.list_reminders(include_inactive=False)[:10]
             pending_tasks = self.reminder_store.list_tasks(include_completed=False)[:10]
         except Exception:
             pass
+
+        if is_authenticated():
+            try:
+                calendar_events = self.calendar_service.get_today_events()
+            except Exception:
+                pass
 
         sys_status = {}
         try:
@@ -84,6 +99,7 @@ class AssistantRouter:
             "system_status": sys_status,
             "active_reminders": active_reminders,
             "pending_tasks": pending_tasks,
+            "upcoming_calendar_events": calendar_events,
         }
 
         # Query Gemini
@@ -221,6 +237,128 @@ class AssistantRouter:
 
         elif action == "system_status":
             return self._result(True, reply or self._system_status()["message"], tool="get_system_status")
+
+        elif action == "list_calendar_events":
+            days = params.get("days", 1)
+            try:
+                days = int(days)
+            except Exception:
+                days = 1
+
+            if not is_authenticated():
+                return self._result(
+                    False,
+                    "Google Workspace is not connected. Run 'scripts/auth_google.py' to connect your Google Calendar.",
+                    tool="list_calendar_events",
+                )
+
+            try:
+                if days <= 1:
+                    events = self.calendar_service.get_today_events()
+                else:
+                    events = self.calendar_service.get_upcoming_events(days=days)
+
+                if not events:
+                    return self._result(
+                        True,
+                        "You have no meetings scheduled for today. Your calendar is clear!",
+                        tool="list_calendar_events",
+                        data={"events": []},
+                    )
+
+                event_titles = [f"'{e['summary']}' at {e['start'][11:16] if 'T' in str(e['start']) else 'all-day'}" for e in events]
+                fallback_reply = f"You have {len(events)} event{'s' if len(events) > 1 else ''} scheduled: {', '.join(event_titles)}."
+                return self._result(True, reply or fallback_reply, tool="list_calendar_events", data={"events": events})
+            except Exception as exc:
+                return self._result(False, f"Could not fetch calendar events: {str(exc)}")
+
+        elif action == "create_calendar_event":
+            summary = str(params.get("summary", "")).strip()
+            start_iso = str(params.get("start_iso", "")).strip()
+            duration = params.get("duration_minutes", 30)
+            desc = params.get("description", "Created via DeskOS Voice")
+
+            if not is_authenticated():
+                return self._result(False, "Google Workspace is not connected.", tool="create_calendar_event")
+            if not summary or not start_iso:
+                return self._result(False, "Missing summary or event start time.")
+
+            try:
+                created = self.calendar_service.create_event(
+                    summary=summary,
+                    start_iso=start_iso,
+                    duration_minutes=int(duration),
+                    description=desc,
+                )
+                return self._result(
+                    True,
+                    reply or f"Scheduled '{summary}' on your Google Calendar.",
+                    tool="create_calendar_event",
+                    data={"event": created},
+                )
+            except Exception as exc:
+                return self._result(False, f"Failed to create calendar event: {str(exc)}")
+
+        elif action == "list_emails":
+            if not is_authenticated():
+                return self._result(False, "Google Workspace is not connected.", tool="list_emails")
+
+            query = str(params.get("query", "is:unread in:inbox")).strip()
+            try:
+                emails = self.gmail_service.search_emails(query=query, max_results=5)
+                if not emails:
+                    return self._result(
+                        True,
+                        "You have no unread emails in your inbox.",
+                        tool="list_emails",
+                        data={"emails": []},
+                    )
+
+                email_summaries = [f"From {e['from'].split('<')[0].strip()}: {e['subject']}" for e in emails]
+                fallback_reply = f"You have {len(emails)} unread email{'s' if len(emails) > 1 else ''}: {'; '.join(email_summaries)}."
+                return self._result(True, reply or fallback_reply, tool="list_emails", data={"emails": emails})
+            except Exception as exc:
+                return self._result(False, f"Could not fetch emails: {str(exc)}")
+
+        elif action == "create_email_draft":
+            if not is_authenticated():
+                return self._result(False, "Google Workspace is not connected.", tool="create_email_draft")
+
+            to_addr = str(params.get("to", "")).strip()
+            subject = str(params.get("subject", "")).strip()
+            body = str(params.get("body", "")).strip()
+
+            if not to_addr or not subject:
+                return self._result(False, "Recipient email and subject are required for drafting an email.")
+
+            try:
+                draft = self.gmail_service.create_draft(to_email=to_addr, subject=subject, body_text=body)
+                return self._result(
+                    True,
+                    reply or f"Created email draft to {to_addr} with subject '{subject}'.",
+                    tool="create_email_draft",
+                    data={"draft": draft},
+                )
+            except Exception as exc:
+                return self._result(False, f"Could not create email draft: {str(exc)}")
+
+        elif action == "create_doc_summary":
+            if not is_authenticated():
+                return self._result(False, "Google Workspace is not connected.", tool="create_doc_summary")
+
+            title = params.get("title")
+            content = params.get("content")
+            try:
+                doc = self.docs_service.create_daily_summary_doc(title=title, initial_content=content)
+                return self._result(
+                    True,
+                    reply or f"Created Google Document: '{doc['title']}'.",
+                    tool="create_doc_summary",
+                    data={"doc": doc},
+                )
+            except Exception as exc:
+                return self._result(False, f"Could not create Google Doc: {str(exc)}")
+
 
         # Conversational reply or answer
         return self._result(True, reply)
