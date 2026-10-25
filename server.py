@@ -442,7 +442,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(500, {"error": "Could not load notifications"})
         elif path.startswith("/api/"):
             self.route_reminder_item("GET", path)
-        elif path in {"/", "/cockpit", "/tasks", "/reminders", "/google", "/voice", "/analytics", "/ambient"}:
+        elif path in {"/", "/cockpit", "/assistant", "/desk", "/tasks", "/reminders", "/google", "/voice", "/analytics", "/ambient"}:
             self.path = "/index.html"
             super().do_GET()
         else:

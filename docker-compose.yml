@@ -18,12 +18,14 @@ services:
       # Code mounts for instant restarts without slow image rebuilds
       - ./server.py:/app/server.py:ro
       - ./device_auth.py:/app/device_auth.py:ro
-      - ./assistant_core.py:/app/assistant_core.py:ro
+      - ./assistant.py:/app/assistant.py:ro
       - ./workspace_auth.py:/app/workspace_auth.py:ro
       - ./services:/app/services:ro
     environment:
       - PYTHONUNBUFFERED=1
       - PORT=8765
+    env_file:
+      - ./.env
 
   nginx:
     image: nginx:alpine

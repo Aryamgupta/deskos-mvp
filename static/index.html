@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#05080e"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="application-name" content="DeskOS"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/deskos.svg" type="image/svg+xml"><title>DeskOS · Car Console</title>
+<meta name="theme-color" content="#05080e"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="application-name" content="DeskOS"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/deskos.svg" type="image/svg+xml"><title>DeskOS · Desk Assistant</title>
 <style>
 :root{
   color-scheme:dark;
@@ -981,9 +981,9 @@ html,body{
         </div>
       </article>
 
-      <!-- Center Pod: Automotive Digital HUD & Speedometer/Clock -->
+      <!-- Center Pod: Desk Assistant Digital HUD & Speedometer/Clock -->
       <article class="cluster-pod center-pod center-hud" id="cockpitCenterHud">
-        <div class="pod-title">DESK COCKPIT · REALME DOCK</div>
+        <div class="pod-title">DESK ASSISTANT · WORKSTATION DOCK</div>
         <div class="clock-display" id="cockpitClock"></div>
         <div class="hud-date" id="cockpitDate">Loading…</div>
 
@@ -1066,7 +1066,7 @@ html,body{
         <div class="pod-title" style="margin-top:14px">QUICK VOICE COMMANDS</div>
         <div style="font-size:11px;color:var(--text-sub);line-height:1.5">
           Say or ask:<br>
-          • <i>"Hello Desk, add a task to test car console"</i><br>
+          • <i>"Hello Desk, add a task to organize workstation"</i><br>
           • <i>"Hello Desk, what are my tasks for today?"</i><br>
           • <i>"Hello Desk, mark task completed"</i>
         </div>
@@ -1266,7 +1266,7 @@ html,body{
   <nav class="automotive-dock">
     <button class="dock-btn active" data-route="/cockpit" data-deck="deck-cockpit" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      <span>COCKPIT</span>
+      <span>ASSISTANT</span>
     </button>
 
     <button class="dock-btn" data-route="/tasks" data-deck="deck-tasks" type="button">
@@ -1428,6 +1428,8 @@ checkDeviceAuth();
 const ROUTES = {
   '/': 'deck-cockpit',
   '/cockpit': 'deck-cockpit',
+  '/assistant': 'deck-cockpit',
+  '/desk': 'deck-cockpit',
   '/tasks': 'deck-tasks',
   '/google': 'deck-google',
   '/reminders': 'deck-reminders',

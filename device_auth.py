@@ -52,6 +52,21 @@ class DeviceAuthManager:
         """Generate or load custom pairing PIN."""
         # Check if user defined a fixed PIN in .env or environment
         custom_pin = os.environ.get("DESKOS_DEVICE_PIN", "").strip()
+        if not custom_pin:
+            for env_candidate in [Path(".env"), Path("/app/.env"), Path(self.data_dir).parent / ".env"]:
+                if env_candidate.exists():
+                    try:
+                        with open(env_candidate, "r", encoding="utf-8") as f:
+                            for line in f:
+                                line = line.strip()
+                                if line.startswith("DESKOS_DEVICE_PIN="):
+                                    custom_pin = line.split("=", 1)[1].strip().strip('"').strip("'")
+                                    break
+                        if custom_pin:
+                            break
+                    except Exception:
+                        pass
+
         if custom_pin and len(custom_pin) == 6 and custom_pin.isdigit():
             self._current_pin = custom_pin
         else:
