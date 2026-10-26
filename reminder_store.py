@@ -136,6 +136,14 @@ class ReminderStore:
                     completed_at TEXT
                 );
                 CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks(status, created_at);
+                CREATE TABLE IF NOT EXISTS desk_docs (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    doc_url TEXT NOT NULL,
+                    summary_snippet TEXT,
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS desk_docs_created_idx ON desk_docs(created_at DESC);
                 CREATE TABLE IF NOT EXISTS analytics_events (
                     id TEXT PRIMARY KEY,
                     event_type TEXT NOT NULL,
@@ -380,3 +388,23 @@ class ReminderStore:
             "focus_sessions_today": focus_sessions,
             "active_reminders": active_reminders,
         }
+
+    # --- Desk Documents Methods ---
+
+    def save_doc(self, doc_id: str, title: str, doc_url: str, summary_snippet: str | None = None) -> dict[str, Any]:
+        now_text = utc_string(datetime.now(UTC))
+        with self.connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO desk_docs (id, title, doc_url, summary_snippet, created_at) VALUES (?, ?, ?, ?, ?)",
+                (doc_id, title, doc_url, summary_snippet, now_text),
+            )
+        return {"id": doc_id, "title": title, "doc_url": doc_url, "summary_snippet": summary_snippet, "created_at": now_text}
+
+    def list_docs(self, limit: int = 20) -> list[dict[str, Any]]:
+        with self.connection() as connection:
+            rows = connection.execute(
+                "SELECT id, title, doc_url, summary_snippet, created_at FROM desk_docs ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+

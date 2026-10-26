@@ -11,6 +11,7 @@ import psutil
 import sqlite3
 
 from assistant import AssistantRouter
+from device_auth import DeviceAuthManager
 from gemini_adapter import GeminiAdapter
 from reminder_store import ReminderStore
 
@@ -21,6 +22,12 @@ CACHE_LOCK = Lock()
 _PROCESS_CACHE = {"at": 0.0, "items": []}
 _TEMP_CACHE = {"at": 0.0, "items": []}
 _GEMINI_ADAPTER = GeminiAdapter.from_environment()
+_DEVICE_AUTH = DeviceAuthManager()
+_REMOTE_LAPTOP_STATUS: dict = {}
+_REMOTE_LAPTOP_LAST_SEEN: float = 0.0
+_REMOTE_LAPTOP_LOCK = Lock()
+
+
 
 
 class EventBroadcaster:
@@ -161,7 +168,7 @@ def select_cpu_temperature(readings):
     return None
 
 
-def collect_status():
+def collect_local_host_status():
     global _NET_PREV, _NET_TIME, _DISK_PREV, _DISK_TIME
     now = time.monotonic()
     net = psutil.net_io_counters()
@@ -238,11 +245,57 @@ def collect_status():
     }
 
 
+def collect_status():
+    """Return workstation telemetry if laptop agent is actively reporting, otherwise local host metrics."""
+    with _REMOTE_LAPTOP_LOCK:
+        now = time.time()
+        if _REMOTE_LAPTOP_STATUS and (now - _REMOTE_LAPTOP_LAST_SEEN < 20.0):
+            data = dict(_REMOTE_LAPTOP_STATUS)
+            data["laptop_online"] = True
+            data["seconds_since_heartbeat"] = round(now - _REMOTE_LAPTOP_LAST_SEEN, 1)
+            return data
+
+    with CACHE_LOCK:
+        data = collect_local_host_status()
+        data["laptop_online"] = False
+        return data
+
+
 class Handler(SimpleHTTPRequestHandler):
     reminder_store = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC), **kwargs)
+
+    def get_client_ip(self) -> str:
+        """Extract remote client IP address."""
+        forwarded = self.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return self.client_address[0] if self.client_address else "127.0.0.1"
+
+    def get_auth_token_from_request(self) -> str | None:
+        """Extract auth token from Cookie or Authorization header."""
+        # Check Authorization: Bearer <token>
+        auth_hdr = self.headers.get("Authorization", "")
+        if auth_hdr.startswith("Bearer "):
+            return auth_hdr[7:].strip()
+        # Check Cookie: deskos_token=<token>
+        cookie_hdr = self.headers.get("Cookie", "")
+        for item in cookie_hdr.split(";"):
+            if "=" in item:
+                k, v = item.strip().split("=", 1)
+                if k == "deskos_token":
+                    return v.strip()
+        return None
+
+    def is_authenticated(self) -> bool:
+        """Verify client authentication: localhost passes automatically; remote devices require token."""
+        client_ip = self.get_client_ip()
+        if _DEVICE_AUTH.is_client_local(client_ip):
+            return True
+        token = self.get_auth_token_from_request()
+        return _DEVICE_AUTH.is_token_valid(token)
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
@@ -252,8 +305,39 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = urlsplit(self.path).path
+        client_ip = self.get_client_ip()
+
+        # Public endpoints that bypass authentication check
         if path == "/health":
             self.send_json(200, {"ok": True, "service": "DeskOS"})
+            return
+        elif path == "/api/auth/status":
+            is_local = _DEVICE_AUTH.is_client_local(client_ip)
+            authed = self.is_authenticated()
+            self.send_json(200, {
+                "authenticated": authed,
+                "is_local": is_local,
+                "client_ip": client_ip,
+            })
+            return
+        elif path == "/api/auth/pin":
+            # Only allow host machine on localhost to query or re-display current PIN
+            if not _DEVICE_AUTH.is_client_local(client_ip):
+                self.send_json(403, {"error": "PIN inspection is only permitted on the local workstation host"})
+                return
+            self.send_json(200, {"pin": _DEVICE_AUTH.get_current_pin()})
+            return
+
+        # Enforce authentication for protected resources
+        if not self.is_authenticated():
+            if path.startswith("/api/"):
+                self.send_json(401, {"error": "Device authentication required. Pair using PIN at /api/auth/pair"})
+                return
+            # Serve index.html so the browser can display the pairing PIN lock screen
+            self.path = "/index.html"
+            super().do_GET()
+            return
+
         elif path == "/api/events":
             # Server-Sent Events stream
             self.send_response(200)
@@ -283,11 +367,11 @@ class Handler(SimpleHTTPRequestHandler):
                 _BROADCASTER.unsubscribe(q)
         elif path == "/api/status":
             try:
-                # Serialize collection to avoid overlapping sensor/process scans if two displays connect.
-                with CACHE_LOCK:
-                    self.send_json(200, collect_status())
+                status_data = collect_status()
+                self.send_json(200, status_data)
             except Exception as exc:
                 self.send_json(500, {"error": "Could not collect system status", "detail": str(exc)[:160]})
+
         elif path == "/api/tasks":
             if not self.require_reminder_store():
                 return
@@ -297,6 +381,40 @@ class Handler(SimpleHTTPRequestHandler):
             except sqlite3.Error:
                 self.log_error("Could not list tasks")
                 self.send_json(500, {"error": "Could not load tasks"})
+        elif path == "/api/workspace/status":
+            from workspace_auth import is_authenticated
+            self.send_json(200, {"connected": is_authenticated()})
+        elif path == "/api/calendar/events":
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(200, {"events": [], "connected": False})
+                return
+            try:
+                from services.calendar_service import GoogleCalendarService
+                cal = GoogleCalendarService()
+                days = 7 if urlsplit(self.path).query == "upcoming=1" else 1
+                events = cal.get_upcoming_events(days=days) if days > 1 else cal.get_today_events()
+                self.send_json(200, {"events": events, "connected": True})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc), "connected": False})
+        elif path == "/api/gmail/unread":
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(200, {"emails": [], "connected": False})
+                return
+            try:
+                from services.gmail_service import GmailService
+                gmail = GmailService()
+                self.send_json(200, {"emails": gmail.get_unread_emails(max_results=8), "connected": True})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc), "connected": False})
+        elif path == "/api/docs":
+            if not self.require_reminder_store():
+                return
+            try:
+                self.send_json(200, {"docs": self.reminder_store.list_docs()})
+            except sqlite3.Error:
+                self.send_json(500, {"error": "Could not load documents"})
         elif path == "/api/analytics":
             if not self.require_reminder_store():
                 return
@@ -324,7 +442,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(500, {"error": "Could not load notifications"})
         elif path.startswith("/api/"):
             self.route_reminder_item("GET", path)
-        elif path in {"/", "/cockpit", "/tasks", "/reminders", "/voice", "/analytics", "/ambient"}:
+        elif path in {"/", "/cockpit", "/assistant", "/desk", "/tasks", "/reminders", "/google", "/voice", "/analytics", "/ambient"}:
             self.path = "/index.html"
             super().do_GET()
         else:
@@ -332,6 +450,64 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
+
+        # Unauthenticated pairing endpoint
+        if path == "/api/auth/pair":
+            try:
+                payload = self.read_json()
+                pin = str(payload.get("pin", "")).strip()
+                device_name = str(payload.get("name", "Mobile Device")).strip()
+                user_agent = self.headers.get("User-Agent", "")
+
+                token = _DEVICE_AUTH.verify_pin_and_pair(pin, device_name=device_name, user_agent=user_agent)
+                if token:
+                    # Set persistent HttpOnly auth cookie for 365 days
+                    cookie_val = f"deskos_token={token}; Path=/; Max-Age=31536000; SameSite=Lax"
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Set-Cookie", cookie_val)
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "ok": True,
+                        "token": token,
+                        "message": "Device authenticated successfully"
+                    }).encode("utf-8"))
+                else:
+                    self.send_json(401, {"ok": False, "error": "Invalid pairing PIN. Check the terminal on the host workstation."})
+            except Exception as exc:
+                self.send_json(400, {"ok": False, "error": str(exc)})
+            return
+
+        # Workstation Telemetry Agent Ingestion Endpoint
+        if path == "/api/telemetry/report":
+            secret = self.headers.get("X-DeskOS-Agent-Secret", "")
+            expected = os.environ.get("DESKOS_AGENT_SECRET", "deskos-laptop-secret-key")
+            if secret != expected:
+                self.send_json(403, {"error": "Invalid agent secret"})
+                return
+            try:
+                data = self.read_json()
+                global _REMOTE_LAPTOP_STATUS, _REMOTE_LAPTOP_LAST_SEEN
+                with _REMOTE_LAPTOP_LOCK:
+                    _REMOTE_LAPTOP_STATUS = data
+                    _REMOTE_LAPTOP_LAST_SEEN = time.time()
+
+                # Immediately push real-time status update to all connected SSE clients
+                telemetry_payload = dict(data)
+                telemetry_payload["laptop_online"] = True
+                telemetry_payload["seconds_since_heartbeat"] = 0.0
+                _BROADCASTER.broadcast("status", telemetry_payload)
+
+                self.send_json(200, {"ok": True, "message": "Telemetry received"})
+            except Exception as exc:
+                self.send_json(400, {"error": str(exc)})
+            return
+
+        # Enforce authentication for all other POST endpoints
+        if not self.is_authenticated():
+            self.send_json(401, {"error": "Device authentication required"})
+            return
+
         if path == "/api/assistant/command":
             if not self.require_reminder_store():
                 return
@@ -410,6 +586,40 @@ class Handler(SimpleHTTPRequestHandler):
             except sqlite3.Error:
                 self.log_error("Could not list tasks")
                 self.send_json(500, {"error": "Could not load tasks"})
+        elif path == "/api/workspace/status":
+            from workspace_auth import is_authenticated
+            self.send_json(200, {"connected": is_authenticated()})
+        elif path == "/api/calendar/events":
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(200, {"events": [], "connected": False})
+                return
+            try:
+                from services.calendar_service import GoogleCalendarService
+                cal = GoogleCalendarService()
+                days = 7 if urlsplit(self.path).query == "upcoming=1" else 1
+                events = cal.get_upcoming_events(days=days) if days > 1 else cal.get_today_events()
+                self.send_json(200, {"events": events, "connected": True})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc), "connected": False})
+        elif path == "/api/gmail/unread":
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(200, {"emails": [], "connected": False})
+                return
+            try:
+                from services.gmail_service import GmailService
+                gmail = GmailService()
+                self.send_json(200, {"emails": gmail.get_unread_emails(max_results=8), "connected": True})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc), "connected": False})
+        elif path == "/api/docs":
+            if not self.require_reminder_store():
+                return
+            try:
+                self.send_json(200, {"docs": self.reminder_store.list_docs()})
+            except sqlite3.Error:
+                self.send_json(500, {"error": "Could not load documents"})
         elif path == "/api/analytics":
             if not self.require_reminder_store():
                 return
@@ -441,10 +651,31 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(404, {"error": "Endpoint not found"})
 
     def do_PATCH(self):
+        if not self.is_authenticated():
+            self.send_json(401, {"error": "Device authentication required"})
+            return
         self.route_reminder_item("PATCH", urlsplit(self.path).path)
 
     def do_DELETE(self):
-        self.route_reminder_item("DELETE", urlsplit(self.path).path)
+        if not self.is_authenticated():
+            self.send_json(401, {"error": "Device authentication required"})
+            return
+        path = urlsplit(self.path).path
+        if path.startswith("/api/calendar/events/"):
+            event_id = path[len("/api/calendar/events/"):]
+            from workspace_auth import is_authenticated
+            if not is_authenticated():
+                self.send_json(401, {"error": "Google Workspace is not connected"})
+                return
+            try:
+                from services.calendar_service import GoogleCalendarService
+                cal = GoogleCalendarService()
+                cal.delete_event(event_id)
+                self.send_json(200, {"ok": True, "message": "Event deleted successfully", "event_id": event_id})
+            except Exception as exc:
+                self.send_json(500, {"error": str(exc)})
+            return
+        self.route_reminder_item("DELETE", path)
 
     def require_reminder_store(self):
         if self.reminder_store is None:
@@ -594,8 +825,7 @@ if __name__ == "__main__":
             while not self.stopping.wait(3):
                 if _BROADCASTER._subscribers:
                     try:
-                        with CACHE_LOCK:
-                            status_data = collect_status()
+                        status_data = collect_status()
                         _BROADCASTER.broadcast("status", status_data)
                     except Exception as exc:
                         print(f"[DeskOS] Telemetry broadcast error: {exc}", flush=True)

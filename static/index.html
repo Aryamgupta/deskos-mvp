@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#05080e"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="application-name" content="DeskOS"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/deskos.svg" type="image/svg+xml"><title>DeskOS · Car Console</title>
+<meta name="theme-color" content="#05080e"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="application-name" content="DeskOS"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/deskos.svg" type="image/svg+xml"><title>DeskOS · Desk Assistant</title>
 <style>
 :root{
   color-scheme:dark;
@@ -471,6 +471,70 @@ html,body{
   letter-spacing:.02em;
 }
 
+/* === DECK: GOOGLE WORKSPACE (/google) === */
+#deck-google{
+  grid-template-columns:1.2fr 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+.google-pod{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.google-scroll-area{
+  flex:1;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding-right:4px;
+}
+.google-scroll-area::-webkit-scrollbar{width:4px}
+.google-scroll-area::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:4px}
+.google-card-item{
+  background:rgba(5,9,15,.7);
+  border:1px solid var(--card-border-subtle);
+  border-radius:12px;
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  transition:border-color .15s;
+}
+.google-card-item:hover{border-color:var(--cy)}
+.google-card-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.google-card-title{
+  font-size:12px;
+  font-weight:600;
+  color:var(--text-main);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.google-card-meta{
+  font-size:10px;
+  color:var(--cy);
+  font-weight:500;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.google-card-snippet{
+  font-size:11px;
+  color:var(--text-sub);
+  line-height:1.35;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
 /* === DECK: REMINDERS (/reminders) === */
 #deck-reminders{
   grid-template-columns:1.5fr 1fr;
@@ -550,6 +614,67 @@ html,body{
   border-color:var(--red);
   color:var(--red);
   box-shadow:0 0 20px rgba(255,92,92,.3);
+}
+
+.transcript-actions{
+  display:none;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+}
+.transcript-actions.active{
+  display:flex;
+}
+.btn-voice-act{
+  padding:6px 12px;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  transition:all .15s;
+}
+.btn-voice-act.cancel{
+  background:rgba(255,92,92,.12);
+  border:1px solid rgba(255,92,92,.35);
+  color:var(--red);
+}
+.btn-voice-act.cancel:hover{
+  background:rgba(255,92,92,.25);
+}
+.btn-voice-act.retry{
+  background:rgba(255,170,51,.12);
+  border:1px solid rgba(255,170,51,.35);
+  color:var(--amber);
+}
+.btn-voice-act.retry:hover{
+  background:rgba(255,170,51,.25);
+}
+.btn-voice-act.send{
+  background:rgba(56,217,245,.15);
+  border:1px solid rgba(56,217,245,.4);
+  color:var(--cy);
+}
+.btn-voice-act.send:hover{
+  background:rgba(56,217,245,.25);
+}
+.send-countdown-bar{
+  height:3px;
+  background:var(--card-border-subtle);
+  border-radius:2px;
+  margin-top:8px;
+  overflow:hidden;
+  display:none;
+}
+.send-countdown-bar.active{display:block}
+.send-countdown-fill{
+  height:100%;
+  width:100%;
+  background:var(--cy);
+  box-shadow:0 0 6px var(--cy-glow);
+  transition:width linear;
 }
 
 .voice-transcript-pod{
@@ -727,13 +852,65 @@ html,body{
 }
 @keyframes micPulse{0%,100%{box-shadow:0 0 5px rgba(255,92,92,.5)}50%{box-shadow:0 0 18px rgba(255,92,92,.85)}}
 
+/* Device Pairing Auth Modal Overlay */
+.auth-gate-overlay{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:radial-gradient(circle at 50% 30%, #0d1a29 0%, #03060a 90%);
+  flex-direction:column;align-items:center;justify-content:center;
+  padding:20px;text-align:center;
+}
+.auth-gate-overlay.active{display:flex}
+.auth-card{
+  background:rgba(9,21,34,.85);
+  border:1px solid rgba(56,217,245,.3);
+  border-radius:20px;
+  padding:32px 24px;
+  max-width:380px;width:100%;
+  box-shadow:0 0 50px rgba(0,0,0,.9), 0 0 20px rgba(56,217,245,.15);
+  display:flex;flex-direction:column;align-items:center;
+}
+.auth-logo-badge{
+  width:52px;height:52px;border-radius:50%;
+  background:rgba(56,217,245,.1);border:1px solid var(--cy);
+  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+  color:var(--cy);box-shadow:0 0 15px rgba(56,217,245,.25);
+}
+.auth-title{font-size:18px;font-weight:700;color:var(--text-main);margin-bottom:6px;letter-spacing:-.01em}
+.auth-sub{font-size:12px;color:var(--text-dim);line-height:1.45;margin-bottom:20px}
+.pin-input-group{
+  display:flex;gap:8px;justify-content:center;margin-bottom:20px;
+}
+.pin-digit-input{
+  width:42px;height:52px;border-radius:10px;
+  background:rgba(5,9,15,.8);border:1px solid var(--card-border);
+  color:var(--cy);font-size:24px;font-weight:700;
+  text-align:center;outline:none;font-family:monospace;
+  transition:border-color .15s, box-shadow .15s;
+}
+.pin-digit-input:focus{
+  border-color:var(--cy);box-shadow:0 0 12px var(--cy-glow);
+}
+.auth-error-msg{
+  font-size:11px;color:var(--red);margin-bottom:12px;min-height:16px;
+}
+.btn-pair-device{
+  width:100%;padding:12px;border-radius:12px;border:0;
+  background:linear-gradient(135deg, var(--cy) 0%, #299fba 100%);
+  color:#03141a;font-size:13px;font-weight:700;cursor:pointer;
+  letter-spacing:.03em;transition:opacity .15s;
+}
+.btn-pair-device:disabled{opacity:.4;cursor:not-allowed}
+
 /* Generic Alert Toast */
 .alert-toast{
   display:none;position:fixed;z-index:99;left:50%;bottom:74px;transform:translateX(-50%);
-  width:min(90vw,480px);padding:10px 14px;border-radius:12px;font-size:12px;
+  width:min(92vw,480px);padding:10px 14px;border-radius:12px;font-size:12px;
   background:#091522;border:1px solid var(--cy);color:var(--cy);
   box-shadow:0 10px 40px rgba(0,0,0,.8);
 }
+.alert-toast.warning{background:#1a1204;border-color:var(--amber);color:var(--amber);box-shadow:0 0 25px rgba(255,170,51,.35)}
+.alert-toast.critical{background:#240606;border-color:var(--red);color:var(--red);box-shadow:0 0 35px rgba(255,92,92,.5);animation:toastPulse 1.2s infinite ease-in-out}
+@keyframes toastPulse{0%,100%{box-shadow:0 0 15px rgba(255,92,92,.3)}50%{box-shadow:0 0 35px rgba(255,92,92,.7)}}
 .alert-toast.show{display:flex;align-items:center;justify-content:space-between}
 .alert-toast button{background:transparent;border:0;color:inherit;font-size:12px;cursor:pointer;padding-left:10px}
 </style>
@@ -755,6 +932,10 @@ html,body{
       <div class="pill-widget" id="tempWidget">TEMP: —</div>
     </div>
     <div class="telem-right">
+      <div class="badge-status" id="googleWorkspaceBadge" style="background:rgba(56,217,245,.08);border-color:rgba(56,217,245,.3);color:var(--cy);cursor:pointer;" title="Google Workspace integration status">
+        <span class="pulse-dot" id="googleDot" style="background:var(--text-dim);box-shadow:none;"></span>
+        <span id="googleStatusText">Google: Offline</span>
+      </div>
       <button class="btn-top" id="wakeWordToggleBtn" type="button" title="Wake word status">🎙️ Wake: On</button>
       <button class="btn-top" id="ambientToggleBtn" type="button">Ambient</button>
       <button class="btn-top" id="fullscreenToggleBtn" type="button">Fullscreen</button>
@@ -803,9 +984,9 @@ html,body{
         </div>
       </article>
 
-      <!-- Center Pod: Automotive Digital HUD & Speedometer/Clock -->
+      <!-- Center Pod: Desk Assistant Digital HUD & Speedometer/Clock -->
       <article class="cluster-pod center-pod center-hud" id="cockpitCenterHud">
-        <div class="pod-title">DESK COCKPIT · REALME DOCK</div>
+        <div class="pod-title">DESK ASSISTANT · WORKSTATION DOCK</div>
         <div class="clock-display" id="cockpitClock"></div>
         <div class="hud-date" id="cockpitDate">Loading…</div>
 
@@ -834,7 +1015,7 @@ html,body{
           </div>
         </div>
 
-        <div class="car-quick-grid">
+        <div class="car-quick-grid" style="grid-template-columns:1fr 1fr 1fr">
           <div class="car-quick-tile" id="tileQuickRemind">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <div class="title">REMINDERS</div>
@@ -842,8 +1023,13 @@ html,body{
           </div>
           <div class="car-quick-tile" id="tileQuickTasks">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            <div class="title">TODAY'S TASKS</div>
+            <div class="title">TASKS</div>
             <div class="sub" id="quickTaskCount">0 Pending</div>
+          </div>
+          <div class="car-quick-tile" id="tileQuickGoogle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div class="title">GOOGLE</div>
+            <div class="sub" id="quickGoogleSub">Workspace</div>
           </div>
         </div>
       </article>
@@ -883,9 +1069,34 @@ html,body{
         <div class="pod-title" style="margin-top:14px">QUICK VOICE COMMANDS</div>
         <div style="font-size:11px;color:var(--text-sub);line-height:1.5">
           Say or ask:<br>
-          • <i>"Hello Desk, add a task to test car console"</i><br>
+          • <i>"Hello Desk, add a task to organize workstation"</i><br>
           • <i>"Hello Desk, what are my tasks for today?"</i><br>
           • <i>"Hello Desk, mark task completed"</i>
+        </div>
+      </article>
+    </section>
+
+    <!-- DECK: GOOGLE WORKSPACE (/google) -->
+    <section class="deck" id="deck-google">
+      <!-- Left Pod: Google Calendar Events -->
+      <article class="cluster-pod google-pod">
+        <div class="task-header-row">
+          <div class="pod-title" style="margin-bottom:0">GOOGLE CALENDAR <span id="googleCalCount">LIVE</span></div>
+          <button class="btn-top" id="refreshCalendarBtn" type="button">↻ Refresh</button>
+        </div>
+        <div class="google-scroll-area" id="googleCalendarList">
+          <div style="color:var(--text-dim);font-size:12px;padding:8px">Loading Calendar events…</div>
+        </div>
+      </article>
+
+      <!-- Right Pod: DeskOS Generated Google Docs -->
+      <article class="cluster-pod google-pod">
+        <div class="task-header-row">
+          <div class="pod-title" style="margin-bottom:0">DESKOS DOCS <span id="googleDocsCount">0 DOCS</span></div>
+          <button class="btn-top" id="refreshDocsBtn" type="button">↻ Refresh</button>
+        </div>
+        <div class="google-scroll-area" id="googleDocsList">
+          <div style="color:var(--text-dim);font-size:12px;padding:8px">Loading DeskOS Google Docs…</div>
         </div>
       </article>
     </section>
@@ -930,10 +1141,26 @@ html,body{
     <!-- DECK 3: VOICE ASSISTANT NEURAL CORE (/voice) -->
     <section class="deck" id="deck-voice">
       <article class="cluster-pod voice-transcript-pod">
-        <div class="pod-title">SPEECH RECOGNITION (STT)</div>
+        <div class="task-header-row">
+          <div class="pod-title" style="margin-bottom:0">SPEECH RECOGNITION (STT)</div>
+          <select id="voiceLangSelect" class="car-input" style="padding:2px 8px;font-size:10px;height:24px" title="Speech Recognition Language">
+            <option value="en-IN" selected>English (India)</option>
+            <option value="hi-IN">Hindi (हिन्दी)</option>
+            <option value="en-US">English (US)</option>
+          </select>
+        </div>
         <div class="transcript-bubble">
-          <div class="transcript-label">USER TRANSCRIPT / LIVE RECOGNITION</div>
+          <div class="transcript-label" id="transcriptStateLabel">USER TRANSCRIPT / LIVE RECOGNITION</div>
           <div class="transcript-text" id="voiceUserText">Say "Hello Desk" or tap Push to Talk to begin speaking…</div>
+          <div class="send-countdown-bar" id="sendCountdownBar">
+            <div class="send-countdown-fill" id="sendCountdownFill"></div>
+          </div>
+          <!-- Tactile Voice Actions: Cancel, Retry, Send Immediately -->
+          <div class="transcript-actions" id="transcriptActions">
+            <button type="button" class="btn-voice-act cancel" id="btnCancelVoice" title="Cancel command and do not send">✕ Cancel</button>
+            <button type="button" class="btn-voice-act retry" id="btnRetryVoice" title="Clear and speak again">↻ Retry</button>
+            <button type="button" class="btn-voice-act send" id="btnSendVoiceNow" title="Send immediately">✓ Send Now</button>
+          </div>
         </div>
       </article>
 
@@ -1042,7 +1269,7 @@ html,body{
   <nav class="automotive-dock">
     <button class="dock-btn active" data-route="/cockpit" data-deck="deck-cockpit" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      <span>COCKPIT</span>
+      <span>ASSISTANT</span>
     </button>
 
     <button class="dock-btn" data-route="/tasks" data-deck="deck-tasks" type="button">
@@ -1050,7 +1277,12 @@ html,body{
       <span>TASKS</span>
     </button>
 
-    <!-- Perfectly Centered Tactile TALK Button (3rd of 5 items) -->
+    <button class="dock-btn" data-route="/google" data-deck="deck-google" type="button" title="Google Workspace (Calendar & Gmail)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>GOOGLE</span>
+    </button>
+
+    <!-- Perfectly Centered Tactile TALK Button -->
     <button class="dock-btn mic-dock-btn" id="dockMicBtn" type="button" title="Push to talk / Voice Assistant">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2.3"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       <span style="font-size:7px;margin-top:1px">TALK</span>
@@ -1069,8 +1301,39 @@ html,body{
 
   <!-- Generic Bottom Alert Toast -->
   <aside class="alert-toast" id="alertToast">
-    <span id="toastMessage">Notification</span>
-    <button type="button" onclick="$('alertToast').classList.remove('show')">✕</button>
+    <div style="display:flex;align-items:center;gap:10px;min-width:0">
+      <span id="toastIcon" style="font-size:16px;flex-shrink:0">⚠️</span>
+      <div style="min-width:0">
+        <div id="toastTitle" style="font-weight:700;font-size:11px;letter-spacing:.03em;text-transform:uppercase;margin-bottom:2px">DeskOS Alert</div>
+        <div id="toastMessage" style="font-size:11px;opacity:.9;line-height:1.4">Notification</div>
+      </div>
+    </div>
+    <button type="button" onclick="$('alertToast').classList.remove('show')" style="font-size:14px;padding:4px 8px;opacity:.7">✕</button>
+  </aside>
+
+  <!-- DEVICE PAIRING AUTH LOCK SCREEN MODAL -->
+  <aside class="auth-gate-overlay" id="authGateOverlay">
+    <div class="auth-card">
+      <div class="auth-logo-badge">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div class="auth-title">DeskOS Security Lock</div>
+      <div class="auth-sub">
+        This device is not yet paired. Enter the 6-digit Device Pairing PIN shown on the host workstation terminal:
+      </div>
+      <form id="authPairForm" style="width:100%">
+        <div class="pin-input-group">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autofocus autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          <input type="text" class="pin-digit-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        </div>
+        <div class="auth-error-msg" id="authErrorMsg"></div>
+        <button type="submit" class="btn-pair-device" id="btnPairDevice" disabled>AUTHENTICATE DEVICE</button>
+      </form>
+    </div>
   </aside>
 </div>
 
@@ -1078,11 +1341,106 @@ html,body{
 const $ = id => document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
+/* === DEVICE PAIRING & AUTH CHECK === */
+let isDeviceAuthenticated = false;
+
+async function checkDeviceAuth() {
+  try {
+    const res = await fetch('/api/auth/status');
+    if (res.ok) {
+      const data = await res.json();
+      isDeviceAuthenticated = data.authenticated;
+      const overlay = $('authGateOverlay');
+      if (!isDeviceAuthenticated && !data.is_local) {
+        overlay.classList.add('active');
+        setupPinInputs();
+      } else {
+        overlay.classList.remove('active');
+      }
+    }
+  } catch (e) {}
+}
+
+function setupPinInputs() {
+  const inputs = document.querySelectorAll('.pin-digit-input');
+  const submitBtn = $('btnPairDevice');
+
+  const checkComplete = () => {
+    const pin = Array.from(inputs).map(i => i.value).join('');
+    submitBtn.disabled = pin.length !== 6;
+  };
+
+  inputs.forEach((input, index) => {
+    input.addEventListener('input', e => {
+      input.value = input.value.replace(/[^0-9]/g, '');
+      if (input.value && index < inputs.length - 1) {
+        inputs[index + 1].focus();
+      }
+      checkComplete();
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !input.value && index > 0) {
+        inputs[index - 1].focus();
+      }
+    });
+
+    input.addEventListener('paste', e => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+      if (text.length >= 6) {
+        inputs.forEach((inp, idx) => inp.value = text[idx] || '');
+        checkComplete();
+      }
+    });
+  });
+
+  $('authPairForm').onsubmit = async e => {
+    e.preventDefault();
+    const pin = Array.from(inputs).map(i => i.value).join('');
+    $('authErrorMsg').textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'AUTHENTICATING…';
+
+    try {
+      const res = await fetch('/api/auth/pair', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          pin,
+          name: navigator.userAgent.includes('Mobile') ? 'Mobile Phone' : 'Laptop'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        $('authGateOverlay').classList.remove('active');
+        showToast('Device authenticated successfully!');
+        window.location.reload();
+      } else {
+        $('authErrorMsg').textContent = data.error || 'Invalid PIN';
+        inputs.forEach(i => i.value = '');
+        inputs[0].focus();
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'AUTHENTICATE DEVICE';
+      }
+    } catch (err) {
+      $('authErrorMsg').textContent = 'Network error connecting to DeskOS host';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'AUTHENTICATE DEVICE';
+    }
+  };
+}
+
+checkDeviceAuth();
+
 /* === ROUTING & DECK SWITCHING SYSTEM === */
 const ROUTES = {
   '/': 'deck-cockpit',
   '/cockpit': 'deck-cockpit',
+  '/assistant': 'deck-cockpit',
+  '/desk': 'deck-cockpit',
   '/tasks': 'deck-tasks',
+  '/google': 'deck-google',
   '/reminders': 'deck-reminders',
   '/voice': 'deck-voice',
   '/analytics': 'deck-analytics',
@@ -1120,6 +1478,7 @@ function navigateTo(path, push = true) {
 
   // Load data for specific decks
   if (deckId === 'deck-tasks') refreshTasks();
+  if (deckId === 'deck-google') refreshGoogleWorkspace();
   if (deckId === 'deck-reminders') refreshReminders();
   if (deckId === 'deck-analytics') refreshAnalytics();
 }
@@ -1136,6 +1495,9 @@ document.querySelectorAll('.dock-btn[data-route]').forEach(btn => {
 // Quick action tile navigation
 $('tileQuickTasks').addEventListener('click', () => navigateTo('/tasks'));
 $('tileQuickRemind').addEventListener('click', () => navigateTo('/reminders'));
+$('tileQuickGoogle').addEventListener('click', () => navigateTo('/google'));
+$('googleWorkspaceBadge').addEventListener('click', () => navigateTo('/google'));
+
 
 // Ambient toggle button in top bar
 $('ambientToggleBtn').addEventListener('click', () => {
@@ -1269,6 +1631,7 @@ function renderStatus(s) {
   if (s.network) {
     $('anNetIo').textContent = `↓${bytes(s.network.down_bytes_sec)} ↑${bytes(s.network.up_bytes_sec)}`;
   }
+  showWarnings(s);
 }
 
 let eventSource = null;
@@ -1527,6 +1890,133 @@ $('reminderCreateForm').addEventListener('submit', async e => {
 });
 $('refreshRemindersBtn').addEventListener('click', refreshReminders);
 
+/* === GOOGLE WORKSPACE (CALENDAR & DESKOS DOCS) === */
+async function refreshGoogleWorkspace() {
+  await Promise.all([refreshCalendar(), refreshDocs()]);
+}
+
+async function refreshCalendar() {
+  const container = $('googleCalendarList');
+  const countBadge = $('googleCalCount');
+  try {
+    const res = await fetch('/api/calendar/events?upcoming=1', {cache: 'no-store'});
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    if (!data.connected) {
+      container.innerHTML = `
+        <div style="padding:16px;text-align:center;color:var(--text-sub)">
+          Google account not linked.<br>
+          <span style="font-size:11px;color:var(--text-dim)">Run <code>.venv/bin/python3 scripts/auth_google.py</code> to connect.</span>
+        </div>`;
+      if (countBadge) countBadge.textContent = 'OFFLINE';
+      return;
+    }
+    const events = data.events || [];
+    if (countBadge) countBadge.textContent = `${events.length} EVENTS`;
+    if ($('quickGoogleSub')) $('quickGoogleSub').textContent = `${events.length} Upcoming`;
+
+    if (!events.length) {
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:12px;text-align:center">No upcoming events scheduled. Your schedule is clear!</div>';
+      return;
+    }
+
+    container.innerHTML = events.map(ev => {
+      let timeStr = 'All-day';
+      if (ev.start && ev.start.includes('T')) {
+        const dt = new Date(ev.start);
+        timeStr = dt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' · ' + dt.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+      } else if (ev.start) {
+        timeStr = ev.start;
+      }
+      return `
+        <div class="google-card-item">
+          <div class="google-card-header">
+            <span class="google-card-title">${esc(ev.summary || 'Untitled Event')}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="task-badge normal" style="font-size:8.5px">CALENDAR</span>
+              <button class="task-btn-check" style="color:var(--red);border-color:rgba(255,92,92,.3);background:rgba(255,92,92,.1);padding:3px 8px;font-size:9.5px" onclick="cancelCalendarEvent('${esc(ev.id)}', '${esc(ev.summary || 'Meeting')}')">Cancel</button>
+            </div>
+          </div>
+          <div class="google-card-meta">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>${esc(timeStr)}</span>
+          </div>
+          ${ev.description ? `<div class="google-card-snippet">${esc(ev.description)}</div>` : ''}
+          ${ev.htmlLink ? `<a href="${esc(ev.htmlLink)}" target="_blank" style="font-size:10px;color:var(--cy);margin-top:2px;text-decoration:none">Open in Google Calendar ↗</a>` : ''}
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = '<div style="color:var(--red);font-size:11px;padding:8px">Failed to load calendar events.</div>';
+  }
+}
+
+async function cancelCalendarEvent(eventId, title) {
+  if (!confirm(`Cancel meeting "${title}" from your Google Calendar?`)) return;
+  try {
+    const res = await fetch(`/api/calendar/events/${encodeURIComponent(eventId)}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      showToast(`Cancelled meeting: "${title}"`);
+      refreshCalendar();
+    } else {
+      const err = await res.json();
+      alert(`Could not cancel meeting: ${err.error || 'Server error'}`);
+    }
+  } catch (e) {
+    alert('Failed to connect to calendar service');
+  }
+}
+
+async function refreshDocs() {
+  const container = $('googleDocsList');
+  const countBadge = $('googleDocsCount');
+  try {
+    const res = await fetch('/api/docs', {cache: 'no-store'});
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const docs = data.docs || [];
+    if (countBadge) countBadge.textContent = `${docs.length} DOCS`;
+
+    if (!docs.length) {
+      container.innerHTML = `
+        <div style="color:var(--text-dim);font-size:12px;padding:16px;text-align:center;line-height:1.6">
+          No DeskOS documents generated yet.<br>
+          <span style="font-size:11px;color:var(--text-sub)">Say <i>"Hello Desk, create a daily summary doc"</i> to generate one!</span>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = docs.map(d => {
+      const createdDate = new Date(d.created_at);
+      const timeStr = createdDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' · ' + createdDate.toLocaleDateString([], {month:'short', day:'numeric'});
+      return `
+        <div class="google-card-item">
+          <div class="google-card-header">
+            <span class="google-card-title">${esc(d.title || 'DeskOS Doc')}</span>
+            <span class="task-badge normal" style="font-size:8px;background:rgba(63,230,148,.1);color:var(--green);border-color:rgba(63,230,148,.3)">DOC</span>
+          </div>
+          <div class="google-card-meta" style="color:var(--text-dim)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span>Created ${esc(timeStr)}</span>
+          </div>
+          ${d.summary_snippet ? `<div class="google-card-snippet">${esc(d.summary_snippet)}</div>` : ''}
+          <a href="${esc(d.doc_url)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--cy);margin-top:4px;text-decoration:none">
+            <span>Open in Google Docs</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </a>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = '<div style="color:var(--red);font-size:11px;padding:8px">Failed to load DeskOS documents.</div>';
+  }
+}
+
+$('refreshCalendarBtn').addEventListener('click', refreshCalendar);
+$('refreshDocsBtn').addEventListener('click', refreshDocs);
+
 /* === DESK ANALYTICS (PRODUCTIVITY & HARDWARE) === */
 async function refreshAnalytics() {
   try {
@@ -1541,11 +2031,90 @@ async function refreshAnalytics() {
   } catch (e) {}
 }
 
-/* === TOAST ALERTS === */
+/* === HARDWARE THRESHOLD WARNINGS & AUDIO ALERTS === */
+let cpuHot = 0, ramHot = 0, tempHot = 0, lastWarningKey = '', toastTimer = null;
+
+const alertSound = new Audio('/sounds/my-alert.mp3');
+alertSound.preload = 'auto';
+alertSound.volume = 1.0;
+
+async function playAlertSound(critical = false) {
+  try {
+    alertSound.pause();
+    alertSound.currentTime = 0;
+    await alertSound.play();
+  } catch (error) {
+    console.warn('DeskOS alert sound could not play:', error);
+  }
+}
+
+function showWarnings(s) {
+  if (!s) return;
+  const warnings = [];
+  const cpu = Number(s.cpu_percent) || 0;
+  const ram = Number(s.memory && s.memory.percent) || 0;
+  cpuHot = cpu >= 90 ? cpuHot + 1 : 0;
+  ramHot = ram >= 90 ? ramHot + 1 : 0;
+
+  const cpuTemperature = Number(s.cpu_temperature && s.cpu_temperature.celsius);
+  const hottest = Number.isFinite(cpuTemperature) ? cpuTemperature : null;
+  tempHot = (hottest !== null && hottest >= 85) ? tempHot + 1 : 0;
+
+  if (cpuHot >= 3) {
+    warnings.push({key: 'cpu-high', text: `High CPU usage sustained (${Math.round(cpu)}%). Check active development tasks.`, critical: cpu >= 96});
+  }
+  if (ramHot >= 3) {
+    warnings.push({key: 'ram-high', text: `RAM usage is critical (${Math.round(ram)}%). Consider closing heavy processes.`, critical: ram >= 95});
+  }
+  if (tempHot >= 2) {
+    warnings.push({key: 'cpu-temp-high', text: `High CPU temperature (${Math.round(hottest)} °C). Check workstation cooling.`, critical: hottest >= 92});
+  }
+  const rootFree = Number(s.disk && s.disk.free) || 0;
+  const rootTotal = Number(s.disk && s.disk.total) || 0;
+  if (rootTotal > 0 && rootFree / rootTotal < 0.08) {
+    warnings.push({key: 'disk-low', text: 'Low free storage: less than 8% remains on primary drive.', critical: false});
+  }
+
+  const activeWarningKeys = warnings.map(w => w.key);
+  const previousWarningKeys = lastWarningKey ? lastWarningKey.split('|') : [];
+  const newWarning = warnings.find(w => !previousWarningKeys.includes(w.key));
+  if (newWarning) {
+    showAlert(newWarning.text, newWarning.critical);
+  }
+  lastWarningKey = activeWarningKeys.join('|');
+}
+
+function showAlert(message, critical = false) {
+  const toast = $('alertToast');
+  if (!toast) return;
+  $('toastTitle').textContent = critical ? 'CRITICAL HARDWARE ALERT' : 'HARDWARE WARNING';
+  $('toastMessage').textContent = message;
+  $('toastIcon').textContent = critical ? '🚨' : '⚠️';
+  toast.classList.remove('warning', 'critical');
+  toast.classList.add(critical ? 'critical' : 'warning');
+  toast.classList.add('show');
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 9000);
+
+  if ('vibrate' in navigator) {
+    try {
+      navigator.vibrate(critical ? [500, 150, 500, 150, 700] : [400, 120, 400]);
+    } catch(e) {}
+  }
+  playAlertSound(critical);
+}
+
 function showToast(msg) {
+  const toast = $('alertToast');
+  if (!toast) return;
+  $('toastTitle').textContent = 'DESK ASSISTANT';
   $('toastMessage').textContent = msg;
-  $('alertToast').classList.add('show');
-  setTimeout(() => $('alertToast').classList.remove('show'), 4000);
+  $('toastIcon').textContent = 'ℹ️';
+  toast.classList.remove('warning', 'critical');
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 /* === AUDIO SYNTHESIS & RECOGNITION (TTS / STT / WAKE WORD) === */
@@ -1652,16 +2221,37 @@ function speakText(text) {
 
 /* Unified STT & Wake Word Listener */
 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+function cleanDuplicateSpeech(str) {
+  if (!str) return '';
+  let s = str.trim();
+  // 1. Collapse duplicate adjacent identical words (e.g. "cancel cancel" -> "cancel", "what what" -> "what")
+  s = s.replace(/\b(\w+)\s+\1\b/gi, '$1');
+  // 2. Collapse duplicate 2-word phrases (e.g. "what is what is" -> "what is")
+  s = s.replace(/\b(\w+\s+\w+)\s+\1\b/gi, '$1');
+  // 3. Remove consecutive duplicate words in token stream
+  const words = s.split(/\s+/);
+  const deduped = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (i === 0 || w.toLowerCase() !== deduped[deduped.length - 1].toLowerCase()) {
+      deduped.push(w);
+    }
+  }
+  return deduped.join(' ');
+}
+
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 let recognizer = null;
 let isListening = false;
 let silenceTimer = null;
 let currentTranscript = '';
-let wakeWordActive = true;
+// Disable continuous background wake listener on mobile to prevent Android OS system beep loops
+let wakeWordActive = !isMobileDevice;
 let isAwaitingCommand = false;
 
 if (SpeechRec) {
   recognizer = new SpeechRec();
-  recognizer.continuous = true;
+  recognizer.continuous = !isMobileDevice; // Single-shot on mobile prevents Android looping chimes
   recognizer.interimResults = true;
   recognizer.lang = navigator.language || 'en-IN';
 
@@ -1670,69 +2260,99 @@ if (SpeechRec) {
     updateMicVisuals(isAwaitingCommand);
   };
 
+  recognizer.onerror = event => {
+    console.warn('[DeskOS SpeechRec error]:', event.error);
+    isListening = false;
+    updateMicVisuals(false);
+    // Only restart background wake-word listener if wake word is active, not speaking, AND on desktop
+    if (wakeWordActive && !isSpeaking && !isMobileDevice) {
+      setTimeout(() => {
+        try { if (!isListening && wakeWordActive && !isSpeaking) recognizer.start(); } catch(e) {}
+      }, 1000);
+    }
+  };
+
+  recognizer.onend = () => {
+    isListening = false;
+    updateMicVisuals(false);
+    // On mobile or in PTT mode, NEVER automatically loop-restart the microphone!
+    if (wakeWordActive && !isSpeaking && !isMobileDevice) {
+      setTimeout(() => {
+        try { if (!isListening && wakeWordActive && !isSpeaking) recognizer.start(); } catch(e) {}
+      }, 1000);
+    }
+  };
+
   recognizer.onresult = event => {
-    // If the assistant is currently speaking aloud, discard audio so it does not listen to itself
     if (isSpeaking) {
       currentTranscript = '';
       return;
     }
 
-    let interim = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const trans = event.results[i][0].transcript;
-      if (event.results[i].isFinal) currentTranscript += ' ' + trans;
-      else interim += trans;
+    let finalStr = '';
+    let interimStr = '';
+    for (let i = 0; i < event.results.length; i++) {
+      const res = event.results[i];
+      if (res && res[0] && res[0].transcript) {
+        if (res.isFinal) {
+          finalStr += ' ' + res[0].transcript;
+        } else {
+          interimStr += ' ' + res[0].transcript;
+        }
+      }
     }
-    const fullText = (currentTranscript + ' ' + interim).trim();
+    const rawText = (finalStr + ' ' + interimStr).trim();
+    const fullText = cleanDuplicateSpeech(rawText);
+    if (!fullText) return;
 
-    // If wake word is active and we are idle, match natural conversational wake phrases:
+    // Phase 1: Idle mode - Listen for wake word
     if (wakeWordActive && !isAwaitingCommand) {
       const lower = fullText.toLowerCase();
-      // Broadened phonetic wake phrase matcher (handles accents, casual phrasing, regional pronunciation)
-      const match = lower.match(/\b(hello\s*desk|hey\s*desk|ok\s*desk|desk\s*os|desk\s*assistant|hi\s*desk|hallo\s*desk|suno\s*desk|desk|desktop)\b/i);
+      // Broadened phonetic matches: desk, hello desk, hey desk, ok desk, suno desk, hi desk, etc.
+      const match = lower.match(/\b(hello\s*desk|hey\s*desk|ok\s*desk|desk\s*os|hi\s*desk|hallo\s*desk|suno\s*desk|desk|desktop|test)\b/i);
       if (match) {
         playTaskChime();
         isAwaitingCommand = true;
-        currentTranscript = '';
         updateMicVisuals(true);
         navigateTo('/voice');
 
-        const postWake = fullText.substring(match.index + match[0].length).trim();
-        if (postWake.length > 2) {
+        const postWake = cleanDuplicateSpeech(fullText.substring(match.index + match[0].length).trim());
+        if (postWake.length > 1) {
           $('voiceUserText').textContent = `"${postWake}"`;
+          currentTranscript = postWake;
         } else {
           $('voiceUserText').textContent = 'Listening for command…';
+          currentTranscript = '';
         }
 
+        // Abort/stop recognizer session cleanly so event.results resets for command capture
+        try { recognizer.stop(); } catch(e) {}
+
         if (silenceTimer) clearTimeout(silenceTimer);
-        silenceTimer = setTimeout(() => {
-          if (isListening && isAwaitingCommand) submitSpokenCommand();
-        }, 2500);
+        showVoiceActions(true);
+        return;
       }
       return;
     }
 
+    // Phase 2: Command capture mode
     if (isAwaitingCommand) {
-      $('voiceUserText').textContent = `"${fullText}"`;
-      if (silenceTimer) clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => {
-        if (isListening && isAwaitingCommand) submitSpokenCommand();
-      }, 2200);
-    }
-  };
-
-  recognizer.onerror = event => {
-    // Automatically resume recognizer on temporary abort or network glitch
-    if (wakeWordActive && !isAwaitingCommand && !isSpeaking) {
-      setTimeout(startBackgroundWakeListener, 400);
-    }
-  };
-  recognizer.onend = () => {
-    isListening = false;
-    updateMicVisuals(false);
-    // Continuous background listening persists across all routes (/cockpit, /tasks, /ambient, etc.)
-    if (wakeWordActive && !isAwaitingCommand && !isSpeaking) {
-      setTimeout(startBackgroundWakeListener, 250);
+      let cmd = fullText.replace(/^(hello\s*desk|hey\s*desk|ok\s*desk|desk\s*os|hi\s*desk|desk)\s*/i, '');
+      if (currentTranscript && !cmd.toLowerCase().startsWith(currentTranscript.toLowerCase())) {
+        cmd = (currentTranscript + ' ' + cmd).trim();
+      }
+      cmd = cleanDuplicateSpeech(cmd);
+      if (cmd) {
+        $('voiceUserText').textContent = `"${cmd}"`;
+        showVoiceActions(true);
+        // Wait for 2.2 seconds of silence after the last spoken word before starting countdown
+        if (silenceTimer) clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => {
+          if (isAwaitingCommand) {
+            startSendCountdown(3500);
+          }
+        }, 2200);
+      }
     }
   };
 }
@@ -1745,9 +2365,94 @@ function updateMicVisuals(listening) {
   $('voiceStatusBadge').textContent = listening ? 'LISTENING' : 'READY';
 }
 
-function submitSpokenCommand(explicitText) {
-  isAwaitingCommand = false;
+function showVoiceActions(show) {
+  const actions = $('transcriptActions');
+  if (actions) actions.classList.toggle('active', show);
+}
+
+function startSendCountdown(ms = 4000) {
   if (silenceTimer) clearTimeout(silenceTimer);
+  const bar = $('sendCountdownBar');
+  const fill = $('sendCountdownFill');
+  if (bar && fill) {
+    bar.classList.add('active');
+    fill.style.transition = 'none';
+    fill.style.width = '100%';
+    setTimeout(() => {
+      fill.style.transition = `width ${ms}ms linear`;
+      fill.style.width = '0%';
+    }, 20);
+  }
+
+  silenceTimer = setTimeout(() => {
+    if (isListening && isAwaitingCommand) {
+      submitSpokenCommand();
+    }
+  }, ms);
+}
+
+function stopSendCountdown() {
+  if (silenceTimer) clearTimeout(silenceTimer);
+  const bar = $('sendCountdownBar');
+  if (bar) bar.classList.remove('active');
+}
+
+/* User Cancellation / Retry Controls */
+function cancelSpokenCommand() {
+  stopSendCountdown();
+  showVoiceActions(false);
+  isAwaitingCommand = false;
+  currentTranscript = '';
+  updateMicVisuals(false);
+  try { if (recognizer && isListening) recognizer.stop(); } catch (e) {}
+  $('voiceUserText').textContent = 'Command cancelled.';
+  showToast('Voice command cancelled. Token saved.');
+  setTimeout(() => {
+    $('voiceUserText').textContent = 'Say "Hello Desk" or tap Push to Talk to begin speaking…';
+    if (wakeWordActive && !isSpeaking) startBackgroundWakeListener();
+  }, 1200);
+}
+
+function retrySpokenCommand() {
+  stopSendCountdown();
+  showVoiceActions(false);
+  isAwaitingCommand = true;
+  currentTranscript = '';
+  $('voiceUserText').textContent = 'Listening again… Speak clearly.';
+  updateMicVisuals(true);
+  try {
+    if (recognizer) {
+      if (!isListening) recognizer.start();
+    }
+  } catch (e) {}
+}
+
+$('btnCancelVoice').addEventListener('click', cancelSpokenCommand);
+$('btnRetryVoice').addEventListener('click', retrySpokenCommand);
+$('btnSendVoiceNow').addEventListener('click', () => {
+  stopSendCountdown();
+  submitSpokenCommand();
+});
+
+/* Language Selector for Speech Recognition (en-IN, hi-IN, en-US) */
+$('voiceLangSelect').addEventListener('change', e => {
+  const newLang = e.target.value;
+  if (recognizer) {
+    recognizer.lang = newLang;
+    try {
+      if (isListening) {
+        recognizer.stop();
+        setTimeout(() => recognizer.start(), 200);
+      }
+    } catch (err) {}
+    showToast(`Speech language set to ${e.target.options[e.target.selectedIndex].text}`);
+  }
+});
+
+function submitSpokenCommand(explicitText) {
+  stopSendCountdown();
+  showVoiceActions(false);
+  isAwaitingCommand = false;
   updateMicVisuals(false);
 
   // Immediately stop recognizer while command is submitted and being answered
@@ -1756,12 +2461,11 @@ function submitSpokenCommand(explicitText) {
   } catch (e) {}
 
   const command = explicitText || $('voiceUserText').textContent.replace(/^"|"$/g, '').trim();
-  if (command && command !== 'Listening for command…') {
+  if (command && command !== 'Listening for command…' && command !== 'Listening to your command…' && command !== 'Command cancelled.') {
     enqueueCommand(command);
   }
 
   currentTranscript = '';
-  // Note: Recognizer will be resumed automatically AFTER speech synthesis finishes speaking
 }
 
 async function enqueueCommand(command) {
@@ -1801,54 +2505,83 @@ function triggerPushToTalk() {
     isAwaitingCommand = true;
     currentTranscript = '';
     $('voiceUserText').textContent = 'Listening to your command…';
+    showVoiceActions(true);
     updateMicVisuals(true);
-    try { if (!isListening) recognizer.start(); } catch (e) {}
+    try {
+      if (!isListening) {
+        recognizer.start();
+        isListening = true;
+      }
+    } catch (e) {}
   }
 }
 
 $('pushToTalkBtn').addEventListener('click', triggerPushToTalk);
 $('dockMicBtn').addEventListener('click', triggerPushToTalk);
 
-/* Wake Word Toggle */
+/* Wake Word Toggle & Mobile PTT Mode */
+$('wakeWordToggleBtn').textContent = wakeWordActive ? '🎙️ Wake: Desk' : '🎙️ PTT Mode';
+$('wakeWordToggleBtn').style.color = wakeWordActive ? 'var(--cy)' : 'var(--text-sub)';
+
 $('wakeWordToggleBtn').addEventListener('click', () => {
   wakeWordActive = !wakeWordActive;
   isAwaitingCommand = false;
-  $('wakeWordToggleBtn').textContent = wakeWordActive ? '🎙️ Wake: Desk' : 'Wake: Off';
+  $('wakeWordToggleBtn').textContent = wakeWordActive ? '🎙️ Wake: Desk' : '🎙️ PTT Mode';
   $('wakeWordToggleBtn').style.color = wakeWordActive ? 'var(--cy)' : 'var(--text-sub)';
   if (wakeWordActive) {
     try { recognizer.start(); } catch (e) {}
-    showToast('Wake word enabled. Say "Hello Desk" anytime.');
+    showToast(isMobileDevice ? 'Wake word active. Push-to-Talk is recommended on mobile.' : 'Wake word enabled. Say "Hello Desk" anytime.');
   } else {
     try { recognizer.stop(); } catch (e) {}
-    showToast('Wake word paused.');
+    showToast('Push-to-Talk mode active. Tap TALK to speak.');
   }
 });
 
 let speechActivated = false;
 
 function startBackgroundWakeListener() {
-  if (!recognizer || !wakeWordActive || isSpeaking) return;
+  if (!recognizer || !wakeWordActive || isSpeaking || isMobileDevice) return;
   try {
-    if (!isListening) recognizer.start();
+    if (!isListening) {
+      recognizer.start();
+      isListening = true;
+    }
   } catch (err) {
     // If browser threw InvalidStateError because it was transitioning, retry once shortly
     setTimeout(() => {
       try {
-        if (wakeWordActive && !isListening && !isSpeaking) recognizer.start();
+        if (wakeWordActive && !isListening && !isSpeaking && !isMobileDevice) {
+          recognizer.start();
+          isListening = true;
+        }
       } catch (e) {}
-    }, 300);
+    }, 600);
   }
 }
 
-// User interaction gesture unlocks microphone permission in browser
+// User interaction gesture unlocks microphone & audio permission in browser
 ['click', 'touchstart', 'keydown'].forEach(evt => {
   document.addEventListener(evt, () => {
+    try {
+      if (alertSound && alertSound.paused && alertSound.currentTime === 0) {
+        alertSound.load();
+      }
+    } catch(e) {}
     if (!speechActivated) {
       speechActivated = true;
-      startBackgroundWakeListener();
+      if (wakeWordActive && !isMobileDevice) {
+        startBackgroundWakeListener();
+      }
     }
   }, { passive: true });
 });
+
+// Also attempt immediate start for auto-launch / kiosk if on desktop
+setTimeout(() => {
+  if (!speechActivated && wakeWordActive && !isMobileDevice) {
+    startBackgroundWakeListener();
+  }
+}, 800);
 
 /* Fullscreen toggle */
 $('fullscreenToggleBtn').addEventListener('click', async () => {
@@ -1857,6 +2590,31 @@ $('fullscreenToggleBtn').addEventListener('click', async () => {
     else await document.exitFullscreen();
   } catch(e) {}
 });
+
+/* Google Workspace Status Polling */
+async function pollWorkspaceStatus() {
+  try {
+    const res = await fetch('/api/workspace/status');
+    if (res.ok) {
+      const data = await res.json();
+      const dot = $('googleDot');
+      const txt = $('googleStatusText');
+      if (dot && txt) {
+        if (data.connected) {
+          dot.style.background = 'var(--green)';
+          dot.style.boxShadow = '0 0 8px var(--green)';
+          txt.textContent = 'Google: Linked';
+        } else {
+          dot.style.background = 'var(--text-dim)';
+          dot.style.boxShadow = 'none';
+          txt.textContent = 'Google: Offline';
+        }
+      }
+    }
+  } catch (e) {}
+}
+pollWorkspaceStatus();
+setInterval(pollWorkspaceStatus, 15000);
 
 /* Initialize Route from initial URL */
 navigateTo(window.location.pathname, false);
