@@ -1,8 +1,46 @@
+# Virtual Environments & Python Cache
 .venv/
+venv/
+env/
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+
+# Environment Variables & API Keys
 .env
-.DS_Store
-/static/sounds/my-alert.mp3
-/data/deskos.sqlite3
+.env.*
+!.env.example
+
+# Google Workspace OAuth Credentials & User Tokens
 credentials.json
+token.json
+data/token.json
+
+# Persistent Databases & Runtime Data
+data/*.sqlite3*
+data/*.db
+data/deskos.sqlite3
+data/authorized_devices.json
+*.sqlite3
+
+# SSL Certificates, Private Keys & OpenSSL Configs
+nginx/certs/*.crt
+nginx/certs/*.key
+nginx/certs/*.cnf
+nginx/certs/*.csr
+
+# Deployment scripts with host passwords
+scripts/deploy_to_pi.py
+scripts/__pycache__/
+
+# Audio Assets & Large Media (optional local audio)
+/static/sounds/my-alert.mp3
+
+# Operating System Metadata & Editor Configs
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
